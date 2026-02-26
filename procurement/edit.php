@@ -68,6 +68,15 @@ $items = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
 /* ===== Handle form submission ===== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+
+    // Estimated value update
+    $estimatedValueRaw = $_POST['estimated_value'] ?? '';
+    $estimatedValue = floatval(str_replace([',', ' '], '', $estimatedValueRaw));
+    if ($estimatedValue <= 0) {
+        pop('Estimated value must be greater than zero.', '/procurement/edit.php?id='.$id, POP_DEFAULT_DELAY_MS, 'error');
+        exit;
+    }
+
     if (empty($_POST['items']) || !is_array($_POST['items'])) {
         pop('At least one item is required', '/procurement/edit.php?id='.$id, POP_DEFAULT_DELAY_MS, 'error');
         exit;
@@ -76,13 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pdo->beginTransaction();
 
     try {
-        // Update header timestamp
+        // Update header timestamp and estimated value
         $stmt = $pdo->prepare("
             UPDATE procurement_requests
-            SET updated_at = NOW()
+            SET updated_at = NOW(), estimated_value = ?
             WHERE request_id = ?
         ");
-        $stmt->execute([$id]);
+        $stmt->execute([$estimatedValue, $id]);
 
 
 /* ===== Capture OLD items for audit ===== */
@@ -231,9 +240,14 @@ require_once $_SERVER['DOCUMENT_ROOT'] . "/includes/header.php";
                 </div>
                 <div class="col-md-3">
                     <small class="text-muted d-block">Estimated Value</small>
-                    <h6 class="mb-0 fw-semibold text-success">
-                        <?= ($request['currency'] ?? 'JMD') ?> <?= number_format((float)($request['estimated_value'] ?? 0), 2) ?>
-                    </h6>
+                    <div class="input-group">
+                        <span class="input-group-text" id="currency_label_edit"><?= ($request['currency'] ?? 'JMD') ?></span>
+                        <input type="text" name="estimated_value" id="estimated_value_edit"
+                               class="form-control form-control-sm text-success fw-semibold"
+                               value="<?= number_format((float)($request['estimated_value'] ?? 0), 2) ?>"
+                               required autocomplete="off">
+                    </div>
+                    <small class="text-muted">You may adjust the estimated value.</small>
                 </div>
                 <div class="col-md-3">
                     <small class="text-muted d-block">Branch</small>
@@ -365,6 +379,18 @@ require_once $_SERVER['DOCUMENT_ROOT'] . "/includes/header.php";
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Auto-format estimated value with commas
+    const estValInput = document.getElementById('estimated_value_edit');
+    if (estValInput) {
+        estValInput.addEventListener('input', function(e) {
+            let val = this.value.replace(/[^\d.]/g, '');
+            if (val) {
+                let parts = val.split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+                this.value = parts.length > 1 ? parts[0] + '.' + parts[1].slice(0,2) : parts[0];
+            }
+        });
+    }
     const addItemBtn = document.getElementById('addItemBtn');
     const itemsContainer = document.getElementById('itemsContainer');
     const itemsBody = document.getElementById('itemsBody');

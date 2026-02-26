@@ -40,10 +40,15 @@ require_once $_SERVER['DOCUMENT_ROOT'] . "/config/auth.php";
     <main class="col-md-10 ms-sm-auto col-lg-10 px-md-4 pt-4">
 
 <?php
+// Flash and login notification modals
 $__flash_msg   = $_SESSION['popup_error']  ?? $_SESSION['popup_success'] ?? null;
 $__flash_isErr = isset($_SESSION['popup_error']);
 if ($__flash_msg !== null) {
-    unset($_SESSION['popup_error'], $_SESSION['popup_success']);
+  unset($_SESSION['popup_error'], $_SESSION['popup_success']);
+}
+$__login_notification = $_SESSION['login_notification'] ?? null;
+if ($__login_notification !== null) {
+  unset($_SESSION['login_notification']);
 }
 ?>
 
@@ -70,6 +75,35 @@ if ($__flash_msg !== null) {
   <script>
   document.addEventListener('DOMContentLoaded', function () {
     var el = document.getElementById('flashModal');
+    if (el && window.bootstrap && bootstrap.Modal) {
+      new bootstrap.Modal(el).show();
+    }
+  });
+  </script>
+
+<?php endif; ?>
+
+<?php if (!empty($__login_notification)): ?>
+  <!-- Login Notification Modal -->
+  <div class="modal fade" id="loginModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Welcome</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <?= htmlspecialchars($__login_notification) ?>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('loginModal');
     if (el && window.bootstrap && bootstrap.Modal) {
       new bootstrap.Modal(el).show();
     }

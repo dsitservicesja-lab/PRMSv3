@@ -92,6 +92,8 @@ if (strtolower($_SESSION['role_name']) === 'admin') {
             exit;
         }
 
+        // Set login notification for pop-up
+        $_SESSION['login_notification'] = 'Welcome, ' . htmlspecialchars($user['full_name']) . '! You have successfully logged in.';
         header("Location: /dashboard/index.php");
         exit;
     }

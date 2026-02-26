@@ -89,12 +89,13 @@ function isCollapsibleActive($urls, $currentPage) {
         </li>
         <?php endif; ?>
 
-        <!-- ===== DIRECTOR HRM&A DASHBOARD ===== -->
-        <?php if ($roleName === 'Director HRM&A'): ?>
+
+        <!-- ===== HOD DASHBOARD ===== -->
+        <?php if ($roleName === 'HOD'): ?>
         <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">DIRECTOR HRM&A</div>
-            <a class="nav-link text-white <?= active('/dashboard/director_hrma', $currentPage) ?>" href="/dashboard/director_hrma.php">
-                🏢 Director HRM&A Dashboard
+            <div class="text-muted small fw-bold px-3 mb-2">HOD</div>
+            <a class="nav-link text-white <?= active('/dashboard/hod', $currentPage) ?>" href="/dashboard/hod.php">
+                🏢 HOD Dashboard
             </a>
             <a class="nav-link text-white <?= active('/procurement', $currentPage) ?>" href="/procurement/list.php">
                 📋 All Requests
