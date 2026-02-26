@@ -125,10 +125,29 @@ function getApprovalChain(string $requestType, float $estimatedValue, ?int $bran
  * }
  */
 function resolveWorkflow(PDO $pdo, string $requestType, float $estimatedValue, ?int $branchId = null): array {
-    $threshold        = getDirectProcurementThreshold($pdo);
-    $isUnderThreshold = $estimatedValue <= $threshold;
-    $isDirect         = isDirectProcurement($requestType, $estimatedValue);
-    $approvalChain    = getApprovalChain($requestType, $estimatedValue, $branchId, $pdo);
+    $threshold = getDirectProcurementThreshold($pdo);
+    // Fetch currency and usd_rate if available (for correct threshold comparison)
+    $currency = null;
+    $usdRate = null;
+    if (func_num_args() > 4) {
+        $currency = func_get_arg(4);
+        $usdRate = func_get_arg(5);
+    }
+    if (!$currency && isset($GLOBALS['request'])) {
+        $currency = $GLOBALS['request']['currency'] ?? 'JMD';
+        $usdRate = $GLOBALS['request']['usd_rate'] ?? null;
+    }
+    if (!$currency) $currency = 'JMD';
+    if (!$usdRate) {
+        // fallback to system rate
+        $stmt = $pdo->prepare("SELECT config_value FROM system_config WHERE config_key = 'usd_to_jmd_rate'");
+        $stmt->execute();
+        $usdRate = (float)($stmt->fetchColumn() ?: 155.00);
+    }
+    $jmdValue = ($currency === 'USD') ? $estimatedValue * (float)$usdRate : $estimatedValue;
+    $isUnderThreshold = $jmdValue <= $threshold;
+    $isDirect = isDirectProcurement($requestType, $jmdValue);
+    $approvalChain = getApprovalChain($requestType, $jmdValue, $branchId, $pdo);
 
     // Determine the status the request transitions to after its approval chain completes
     if ($isDirect) {

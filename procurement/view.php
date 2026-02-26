@@ -173,10 +173,12 @@ $poTotal   = $po ? (float)$po['po_total'] : 0;
    Get request details and type
 ================================ */
 $requestType = $request['request_type'] ?? 'REGULAR';
-$estimatedValue = (float)($request['estimated_value'] ?? 0);
+$estimatedValueRaw = (float)($request['estimated_value'] ?? 0);
 $branchId = (int)($request['branch_id'] ?? 0);
 $requestCurrency = normalizeCurrency($request['currency'] ?? 'JMD');
 $requestUsdRate = (float)($request['usd_rate'] ?? 0);
+// Always use JMD for threshold comparison
+$estimatedValue = ($requestCurrency === 'USD') ? $estimatedValueRaw * ($requestUsdRate ?: 155.00) : $estimatedValueRaw;
 
 /* ================================
    Fetch approval chain from database
@@ -798,7 +800,7 @@ $rfqId = $stmt->fetchColumn();
                     $nextStepColor = 'text-warning';
                 } elseif (in_array($current, ['HOD_APPROVED', 'FUNDS_VERIFIED', 'DIRECTOR_APPROVED', 'GC_APPROVED'])) {
                     // Resolve the correct workflow to show accurate next step
-                    $wf = resolveWorkflow($pdo, $requestType, $estimatedValue, $branchId);
+                    $wf = resolveWorkflow($pdo, $requestType, $estimatedValue, $branchId, $requestCurrency, $requestUsdRate);
                     if ($current === 'GC_APPROVED' && $rfqId) {
                         // Post-committee GC approval — ready for vendor award
                         $nextStepDisplay = "GC approved. Proceed to award the recommended vendor.";
