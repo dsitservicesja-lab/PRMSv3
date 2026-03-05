@@ -81,23 +81,14 @@ try {
 
     /* ================================
        Create Approval Chain for Reimbursement
-       Reimbursement requests go through:
-       1. Branch HOD (if threshold-based)
-       2. Finance Officer (verification)
+       Reimbursement requests go directly to Finance for fund verification
+       (No HOD approval needed - simplified workflow)
     ================================ */
     $estimatedValue = (float)($request['estimated_value'] ?? 0);
     $branchId = (int)($request['branch_id'] ?? 0);
 
-    // Get approval chain based on amount
-    $approvalRoles = [];
-    
-    // Determine if HOD approval is needed (threshold >= 100000)
-    if ($estimatedValue >= 100000) {
-        $approvalRoles[] = 'HOD';
-    }
-    
-    // Finance Officer always approves for reimbursements
-    $approvalRoles[] = 'Finance Officer';
+    // Reimbursement only requires Finance Officer approval (fund verification)
+    $approvalRoles = ['Finance Officer'];
 
     // Create approval entries
     $stageOrder = 1;
@@ -137,7 +128,10 @@ try {
     ================================ */
     require_once $_SERVER['DOCUMENT_ROOT'].'/config/notifications.php';
 
-    // Send notification to first approver with action required
+    // Notify all Finance Officers about this reimbursement request
+    notifyFinanceForDirectApproval($request_id, 'REIMBURSEMENT');
+
+    // Also send approval notification to first approver
     if ($firstApprovalRole) {
         $approverStmt = $pdo->prepare('
             SELECT u.user_id

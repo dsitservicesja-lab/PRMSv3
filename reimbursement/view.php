@@ -297,6 +297,32 @@ require_once $_SERVER['DOCUMENT_ROOT'] . "/includes/header.php";
             </form>
           <?php endif; ?>
           
+          <?php 
+          // Finance approval actions
+          $isFinanceOfficer = ($_SESSION['role_name'] ?? '') === 'Finance Officer';
+          $canApprove = in_array($request['status'], ['SUBMITTED']) && $isFinanceOfficer;
+          ?>
+          
+          <?php if ($canApprove): ?>
+            <div class="alert alert-info py-2 mb-2">
+              <small><strong>Action Required:</strong> Verify funds and approve this reimbursement request.</small>
+            </div>
+            <form method="post" action="/reimbursement/approve.php" class="d-inline">
+              <input type="hidden" name="request_id" value="<?= $request_id ?>">
+              <input type="hidden" name="action" value="approve">
+              <button type="submit" class="btn btn-success btn-sm w-100 mb-2">
+                <i class="bi bi-check-circle"></i> Verify Funds & Approve
+              </button>
+            </form>
+            <form method="post" action="/reimbursement/approve.php" class="d-inline">
+              <input type="hidden" name="request_id" value="<?= $request_id ?>">
+              <input type="hidden" name="action" value="decline">
+              <button type="submit" class="btn btn-danger btn-sm w-100">
+                <i class="bi bi-x-circle"></i> Decline
+              </button>
+            </form>
+          <?php endif; ?>
+          
           <a href="/reimbursement/list.php" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left"></i> Back to List
           </a>

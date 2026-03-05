@@ -81,16 +81,11 @@ try {
 
     /* ================================
        Create Approval Chain for Petty Cash
-       Petty cash requests go through:
-       1. Branch HOD (review & endorse)
-       2. Procurement Officer (recommend & endorse)
-       3. Finance Officer (authorize disbursement)
+       Petty cash requests go directly to Finance for fund verification
+       (Simplified workflow - no HOD or Procurement approval needed)
     ================================ */
-    $approvalRoles = [
-        'HOD',                  // Step 1: Branch supervisor review
-        'Procurement Officer',  // Step 2: Procurement endorsement
-        'Finance Officer'       // Step 3: Finance authorization
-    ];
+    // Only Finance Officer approval required for petty cash
+    $approvalRoles = ['Finance Officer'];
 
     // Create approval entries
     $stageOrder = 1;
@@ -110,7 +105,7 @@ try {
             $firstApprovalStage = match($role) {
                 'HOD' => 'HOD_APPROVED',
                 'Procurement Officer' => 'PROCUREMENT_ENDORSED',
-                'Finance Officer' => 'FINANCE_AUTHORIZED',
+                'Finance Officer' => 'FUNDS_VERIFIED',
                 default => 'HOD_APPROVED'
             };
         }
@@ -131,7 +126,10 @@ try {
     ================================ */
     require_once $_SERVER['DOCUMENT_ROOT'].'/config/notifications.php';
 
-    // Send notification to first approver with action required
+    // Notify all Finance Officers about this petty cash request
+    notifyFinanceForDirectApproval($request_id, 'PETTY_CASH');
+
+    // Also send approval notification to first approver
     if ($firstApprovalRole) {
         $approverStmt = $pdo->prepare('
             SELECT u.user_id

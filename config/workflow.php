@@ -84,12 +84,12 @@ function stageOwner(string $stage): array {
  *   - Analytical & Advisory branch (id=6) → Deputy Government Chemist
  *   - All other branches               → HOD
  *
- * Petty Cash / Reimbursement always route to HOD.
+ * Petty Cash / Reimbursement: Direct to Finance Officer for fund verification.
  */
 function getApprovalChain(string $requestType, float $estimatedValue, ?int $branchId = null, ?PDO $pdo = null): array {
-    // Petty cash / reimbursement: HOD only
+    // Petty cash / reimbursement: Finance Officer only (fund verification)
     if (in_array($requestType, ['PETTY_CASH', 'REIMBURSEMENT'])) {
-        return ['HOD'];
+        return ['Finance Officer'];
     }
 
     // Branch-based approvals (ONE approver per branch, regardless of amount)
@@ -390,24 +390,21 @@ function getNextStatusAfterApproval(PDO $pdo, int $requestId, string $approvingR
 
 /**
  * Get reimbursement approval chain
- * Flow: Branch Head Authorizes → Procurement Verifies → Finance Processes
+ * Flow: Direct to Finance for fund verification
  */
 function getReimbursementApprovalChain(): array {
-    return ['Branch Head', 'Procurement Officer', 'Finance Officer'];
+    return ['Finance Officer'];
 }
 
 /**
  * Get allowed status transitions for reimbursement requests
+ * Simplified workflow: Submitted -> Finance Verifies -> Reimbursed
  */
 function getReimbursementTransitions(): array {
     return [
         'DRAFT'                        => ['SUBMITTED'],
-        'SUBMITTED'                    => ['PRE_AUTHORIZED', 'DECLINED'],
-        'PRE_AUTHORIZED'               => ['PENDING_PROCUREMENT_VERIFICATION', 'DECLINED'],
-        'PENDING_PROCUREMENT_VERIFICATION' => ['VERIFIED', 'DECLINED'],
-        'VERIFIED'                     => ['PENDING_ORIGINAL_INVOICE', 'DECLINED'],
-        'PENDING_ORIGINAL_INVOICE'     => ['PENDING_FINANCE_REVIEW', 'DECLINED'],
-        'PENDING_FINANCE_REVIEW'       => ['APPROVED', 'DECLINED'],
+        'SUBMITTED'                    => ['FUNDS_VERIFIED', 'DECLINED'],
+        'FUNDS_VERIFIED'               => ['APPROVED', 'DECLINED'],
         'APPROVED'                     => ['REIMBURSED'],
         'REIMBURSED'                   => ['COMPLETED'],
         'COMPLETED'                    => [],
@@ -431,21 +428,21 @@ function canReimbursementTransition(string $current, string $next): bool {
 
 /**
  * Get petty cash approval chain
- * Flow: Branch Head → Finance Officer → with 24-hour reconciliation
+ * Flow: Direct to Finance for fund verification
  */
 function getPettyCashApprovalChain(): array {
-    return ['Branch Head', 'Procurement Officer', 'Finance Officer'];
+    return ['Finance Officer'];
 }
 
 /**
  * Get allowed status transitions for petty cash requests
+ * Simplified workflow: Submitted -> Finance Authorizes -> Disbursed -> Reconciliation
  */
 function getPettyCashTransitions(): array {
     return [
         'DRAFT'                    => ['SUBMITTED'],
-        'SUBMITTED'                => ['HOD_REVIEWED', 'DECLINED'],
-        'HOD_REVIEWED'             => ['PROCUREMENT_ENDORSED', 'DECLINED'],
-        'PROCUREMENT_ENDORSED'     => ['FINANCE_AUTHORIZED', 'DECLINED'],
+        'SUBMITTED'                => ['FUNDS_VERIFIED', 'DECLINED'],
+        'FUNDS_VERIFIED'           => ['FINANCE_AUTHORIZED', 'DECLINED'],
         'FINANCE_AUTHORIZED'       => ['DISBURSED'],
         'DISBURSED'                => ['PENDING_RECONCILIATION'],
         'PENDING_RECONCILIATION'   => ['PROCUREMENT_VERIFIED', 'RECONCILIATION_DISCREPANCY'],
@@ -492,12 +489,8 @@ function getPettyCashDeadline(DateTime $disbursementTime, float $windowHours = 2
 function getReimbursementStatusLabel(string $status): string {
     return match($status) {
         'DRAFT' => '📝 Draft',
-        'SUBMITTED' => '📤 Submitted',
-        'PRE_AUTHORIZED' => '✅ Pre-Authorized',
-        'PENDING_PROCUREMENT_VERIFICATION' => '🔍 Awaiting Verification',
-        'VERIFIED' => '✔️ Verified',
-        'PENDING_ORIGINAL_INVOICE' => '📄 Awaiting Invoice',
-        'PENDING_FINANCE_REVIEW' => '💰 In Finance Review',
+        'SUBMITTED' => '📤 Pending Finance Review',
+        'FUNDS_VERIFIED' => '💰 Funds Verified',
         'APPROVED' => '✅ Approved',
         'REIMBURSED' => '💳 Reimbursed',
         'COMPLETED' => '✓ Completed',
@@ -512,9 +505,8 @@ function getReimbursementStatusLabel(string $status): string {
 function getPettyCashStatusLabel(string $status): string {
     return match($status) {
         'DRAFT' => '📝 Draft',
-        'SUBMITTED' => '📤 Submitted',
-        'HOD_REVIEWED' => '👤 HOD Reviewed',
-        'PROCUREMENT_ENDORSED' => '✅ Procurement Endorsed',
+        'SUBMITTED' => '📤 Pending Finance Review',
+        'FUNDS_VERIFIED' => '💰 Funds Verified',
         'FINANCE_AUTHORIZED' => '💰 Finance Authorized',
         'DISBURSED' => '💵 Disbursed',
         'PENDING_RECONCILIATION' => '⏱️ Reconciliation Due',

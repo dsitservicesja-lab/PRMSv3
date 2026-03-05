@@ -239,6 +239,145 @@ HTML;
 }
 
 /**
+ * Notify all Finance Officers about a new reimbursement or petty cash request
+ * These requests bypass HOD/Procurement and go directly to Finance for fund verification
+ */
+function notifyFinanceForDirectApproval(int $requestId, string $requestType): bool {
+    if (!notificationsEnabled()) {
+        error_log("NOTIFY: Notifications disabled globally");
+        return false;
+    }
+
+    global $pdo;
+    try {
+        error_log("NOTIFY FINANCE: Starting finance notification for {$requestType} request $requestId");
+        
+        // Get request details
+        $stmt = $pdo->prepare("
+            SELECT pr.request_number, pr.estimated_value, pr.description, pr.request_type,
+                   b.branch_name, u.full_name as requestor_name
+            FROM procurement_requests pr
+            LEFT JOIN branches b ON pr.branch_id = b.branch_id
+            LEFT JOIN users u ON pr.created_by = u.user_id
+            WHERE pr.request_id = ?
+        ");
+        $stmt->execute([$requestId]);
+        $request = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$request) {
+            error_log("NOTIFY FINANCE: Request not found for ID $requestId");
+            return false;
+        }
+
+        // Get all Finance Officers
+        $financeUsers = getUsersByRole('Finance Officer');
+        if (empty($financeUsers)) {
+            error_log("NOTIFY FINANCE: No Finance Officers found in the system");
+            return false;
+        }
+
+        $typeDisplay = ($requestType === 'PETTY_CASH') ? 'Petty Cash' : 'Reimbursement';
+        $typeEmoji = ($requestType === 'PETTY_CASH') ? '💰' : '💵';
+        $subject = "Action Required: {$typeDisplay} Request - {$request['request_number']}";
+        $appUrl = getAppUrl();
+        $estimatedValue = number_format($request['estimated_value'], 2);
+        $viewUrl = ($requestType === 'PETTY_CASH') 
+            ? "{$appUrl}/petty_cash/view.php?request_id={$requestId}"
+            : "{$appUrl}/reimbursement/view.php?request_id={$requestId}";
+        
+        $html = <<<HTML
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+        .header { background: linear-gradient(90deg, #0b5e2b, #c9a227); color: white; padding: 20px; }
+        .content { padding: 20px; }
+        .alert { background: #cce5ff; border-left: 4px solid #0056b3; padding: 12px; margin: 15px 0; border-radius: 4px; }
+        .details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .detail-row { margin: 8px 0; }
+        .label { font-weight: bold; color: #555; }
+        .button { background: #0b5e2b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 15px; }
+        .footer { background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2 style="margin: 0;">{$typeEmoji} {$typeDisplay} Request - Fund Verification Needed</h2>
+            <p style="margin: 5px 0 0 0;">Government Chemist - PRMS</p>
+        </div>
+        <div class="content">
+            <p>Dear Finance Officer,</p>
+            
+            <div class="alert">
+                <strong>💰 Fund Verification Required:</strong> A new {$typeDisplay} request has been submitted and requires your fund verification.
+            </div>
+            
+            <div class="details">
+                <div class="detail-row">
+                    <span class="label">Request Number:</span> {$request['request_number']}
+                </div>
+                <div class="detail-row">
+                    <span class="label">Request Type:</span> {$typeDisplay}
+                </div>
+                <div class="detail-row">
+                    <span class="label">Requestor:</span> {$request['requestor_name']}
+                </div>
+                <div class="detail-row">
+                    <span class="label">Branch:</span> {$request['branch_name']}
+                </div>
+                <div class="detail-row">
+                    <span class="label">Amount:</span> \${$estimatedValue}
+                </div>
+                <div class="detail-row">
+                    <span class="label">Description:</span> {$request['description']}
+                </div>
+            </div>
+            
+            <p>Please verify fund availability and process this request.</p>
+            
+            <p>
+                <a href="{$viewUrl}" class="button">
+                    Review & Verify Funds
+                </a>
+            </p>
+            
+            <p style="margin-top: 20px; font-size: 12px; color: #777;">
+                This is an automated notification from the Procurement Request Management System.
+            </p>
+        </div>
+        <div class="footer">
+            <p>&copy; Government Chemist &middot; PRMS &middot; Confidential</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+
+        // Send to all Finance Officers
+        $successCount = 0;
+        foreach ($financeUsers as $finance) {
+            if (!empty($finance['email'])) {
+                error_log("NOTIFY FINANCE: Sending to {$finance['email']}");
+                if (sendMail($finance['email'], $subject, $html)) {
+                    $successCount++;
+                }
+            }
+        }
+
+        error_log("NOTIFY FINANCE: Sent to {$successCount} finance officers");
+        return $successCount > 0;
+
+    } catch (Exception $e) {
+        error_log("Notify finance for direct approval ERROR: {$e->getMessage()}");
+        return false;
+    }
+}
+
+/**
  * Approval needed notification - send to approver
  */
 function notifyApprovalNeeded(int $requestId, string $stage, int $approverId): bool {

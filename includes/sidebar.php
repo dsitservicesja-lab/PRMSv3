@@ -176,11 +176,12 @@ function isCollapsibleActive($urls, $currentPage) {
                href="/reimbursement/list.php">
                 💵 Reimbursement Requests
                 <?php
+                // Show count of requests pending Finance approval
                 $reimbPending = $pdo->query("
                     SELECT COUNT(*)
                     FROM procurement_requests
                     WHERE request_type='REIMBURSEMENT'
-                    AND status IN ('SUBMITTED', 'HOD_APPROVED', 'DIRECTOR_APPROVED', 'GC_APPROVED', 'FUNDS_VERIFIED')
+                    AND status = 'SUBMITTED'
                 ")->fetchColumn();
                 if ($reimbPending > 0):
                 ?>
@@ -194,11 +195,12 @@ function isCollapsibleActive($urls, $currentPage) {
                href="/petty_cash/list.php">
                 🏧 Petty Cash Requests
                 <?php
+                // Show count of requests pending Finance approval
                 $pettyCashPending = $pdo->query("
                     SELECT COUNT(*)
                     FROM procurement_requests
                     WHERE request_type='PETTY_CASH'
-                    AND status IN ('SUBMITTED', 'HOD_APPROVED', 'DIRECTOR_APPROVED', 'GC_APPROVED', 'FUNDS_VERIFIED')
+                    AND status = 'SUBMITTED'
                 ")->fetchColumn();
                 if ($pettyCashPending > 0):
                 ?>

@@ -239,8 +239,8 @@ if ($disbursement) {
               <i class="bi bi-check-circle-fill text-success"></i>
             </div>
             <div class="list-group-item d-flex justify-content-between align-items-center">
-              <span>2. Approval Workflow</span>
-              <i class="bi <?= in_array($request['status'], ['HOD_REVIEWED', 'PROCUREMENT_ENDORSED', 'FINANCE_AUTHORIZED', 'DISBURSED', 'PENDING_RECONCILIATION', 'COMPLETED']) ? 'bi-check-circle-fill text-success' : 'bi-circle' ?>"></i>
+              <span>2. Finance Verifies Funds</span>
+              <i class="bi <?= in_array($request['status'], ['FUNDS_VERIFIED', 'FINANCE_AUTHORIZED', 'DISBURSED', 'PENDING_RECONCILIATION', 'COMPLETED']) ? 'bi-check-circle-fill text-success' : 'bi-circle' ?>"></i>
             </div>
             <div class="list-group-item d-flex justify-content-between align-items-center">
               <span>3. Finance Disbursal</span>
@@ -272,6 +272,32 @@ if ($disbursement) {
               <input type="hidden" name="request_id" value="<?= $request_id ?>">
               <button type="submit" class="btn btn-success btn-sm w-100">
                 <i class="bi bi-send"></i> Submit for Approval
+              </button>
+            </form>
+          <?php endif; ?>
+          
+          <?php 
+          // Finance approval actions
+          $isFinanceOfficer = ($_SESSION['role_name'] ?? '') === 'Finance Officer';
+          $canApprove = in_array($request['status'], ['SUBMITTED']) && $isFinanceOfficer;
+          ?>
+          
+          <?php if ($canApprove): ?>
+            <div class="alert alert-info py-2 mb-2">
+              <small><strong>Action Required:</strong> Verify funds and authorize this petty cash request.</small>
+            </div>
+            <form method="post" action="/petty_cash/approve.php" class="d-inline">
+              <input type="hidden" name="request_id" value="<?= $request_id ?>">
+              <input type="hidden" name="action" value="approve">
+              <button type="submit" class="btn btn-success btn-sm w-100 mb-2">
+                <i class="bi bi-check-circle"></i> Verify Funds & Authorize
+              </button>
+            </form>
+            <form method="post" action="/petty_cash/approve.php" class="d-inline">
+              <input type="hidden" name="request_id" value="<?= $request_id ?>">
+              <input type="hidden" name="action" value="decline">
+              <button type="submit" class="btn btn-danger btn-sm w-100">
+                <i class="bi bi-x-circle"></i> Decline
               </button>
             </form>
           <?php endif; ?>
