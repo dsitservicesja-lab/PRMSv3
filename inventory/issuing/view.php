@@ -10,7 +10,7 @@ if ($issueId <= 0) { pop("Invalid issue.", "/inventory/issuing/list.php", 1800, 
 $issue = $pdo->prepare("
     SELECT si.*, u.full_name AS issuer_name, r.full_name AS recipient_name,
            b.branch_name, l.location_code, l.site_name
-    FROM inv_stock_issues si
+    FROM inv_issues si
     LEFT JOIN users u ON si.issued_by = u.user_id
     LEFT JOIN users r ON si.issued_to_user_id = r.user_id
     LEFT JOIN branches b ON si.issued_to_department_id = b.branch_id
@@ -23,7 +23,7 @@ if (!$issue) { pop("Issue not found.", "/inventory/issuing/list.php", 1800, 'war
 
 $lineItems = $pdo->prepare("
     SELECT sii.*, i.item_code, i.item_name, um.uom_code
-    FROM inv_stock_issue_items sii
+    FROM inv_issue_items sii
     JOIN inv_items i ON sii.item_id = i.item_id
     LEFT JOIN inv_units_of_measure um ON i.uom_id = um.uom_id
     WHERE sii.issue_id = ?

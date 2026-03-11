@@ -4,7 +4,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/config/page_guard.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/db.php';
 require_once __DIR__ . '/../check_setup.php';
 
-$items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items WHERE status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
+$items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items WHERE item_status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
 $locations = $pdo->query("SELECT location_id, location_code, site_name FROM inv_locations WHERE is_active=1 ORDER BY site_name")->fetchAll(PDO::FETCH_ASSOC);
 
 $reasonCodes = ['DAMAGE','EXPIRY','THEFT','COUNTING_ERROR','SYSTEM_ERROR','OBSOLESCENCE','QUALITY_ISSUE','NATURAL_LOSS','FOUND_SURPLUS','OTHER'];
@@ -29,8 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $adjNumber = InventoryService::generateDocNumber($pdo, 'ADJ', 'inv_adjustments', 'adjustment_number');
 
         $pdo->prepare("INSERT INTO inv_adjustments
-            (adjustment_number, adjustment_type, location_id, reason_code, description, notes,
-             created_by, status, created_at)
+            (adjustment_number, adjustment_type, location_id, reason_code, reason_detail, notes,
+             requested_by, status, created_at)
             VALUES (?,?,?,?,?,?,?,?,NOW())")
             ->execute([$adjNumber, $adjType, $locationId, $reasonCode, $description, $notes,
                 $_SESSION['user_id'], 'PENDING_APPROVAL']);

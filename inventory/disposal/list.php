@@ -15,7 +15,7 @@ if ($status) { $where .= " AND d.status = ?"; $params[] = $status; }
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
 list($limit, $offset, $page) = getPaginationParams();
 
-$total = $pdo->prepare("SELECT COUNT(*) FROM inv_disposal_requests d LEFT JOIN users u ON d.requested_by = u.user_id WHERE $where");
+$total = $pdo->prepare("SELECT COUNT(*) FROM inv_disposals d LEFT JOIN users u ON d.requested_by = u.user_id WHERE $where");
 $total->execute($params);
 $totalRows = $total->fetchColumn();
 
@@ -23,7 +23,7 @@ $stmt = $pdo->prepare("
     SELECT d.*, u.full_name AS requester_name,
            (SELECT COUNT(*) FROM inv_disposal_items WHERE disposal_id = d.disposal_id) AS line_count,
            (SELECT SUM(estimated_value) FROM inv_disposal_items WHERE disposal_id = d.disposal_id) AS total_value
-    FROM inv_disposal_requests d
+    FROM inv_disposals d
     LEFT JOIN users u ON d.requested_by = u.user_id
     WHERE $where
     ORDER BY d.created_at DESC
@@ -36,7 +36,7 @@ $kpi = $pdo->query("SELECT COUNT(*) AS total,
     SUM(CASE WHEN status='COMPLETED' THEN 1 ELSE 0 END) AS completed,
     SUM(CASE WHEN status='PENDING_SURVEY' THEN 1 ELSE 0 END) AS survey,
     SUM(CASE WHEN status='PENDING_APPROVAL' THEN 1 ELSE 0 END) AS pending
-    FROM inv_disposal_requests")->fetch(PDO::FETCH_ASSOC);
+    FROM inv_disposals")->fetch(PDO::FETCH_ASSOC);
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
 ?>

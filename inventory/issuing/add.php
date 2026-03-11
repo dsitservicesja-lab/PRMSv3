@@ -4,7 +4,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/config/page_guard.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/db.php';
 require_once __DIR__ . '/../check_setup.php';
 
-$items = $pdo->query("SELECT item_id, item_code, item_name, issue_policy FROM inv_items WHERE status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
+$items = $pdo->query("SELECT item_id, item_code, item_name, issue_policy FROM inv_items WHERE item_status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
 $locations = $pdo->query("SELECT location_id, location_code, site_name FROM inv_locations WHERE is_active=1 ORDER BY site_name")->fetchAll(PDO::FETCH_ASSOC);
 $users = $pdo->query("SELECT user_id, full_name FROM users WHERE status='active' ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
 $departments = $pdo->query("SELECT branch_id, branch_name FROM branches ORDER BY branch_name")->fetchAll(PDO::FETCH_ASSOC);
@@ -46,9 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("At least one item is required.");
         }
 
-        $issueNumber = InventoryService::generateDocNumber($pdo, 'SIV', 'inv_stock_issues', 'issue_number');
+        $issueNumber = InventoryService::generateDocNumber($pdo, 'SIV', 'inv_issues', 'issue_number');
 
-        $pdo->prepare("INSERT INTO inv_stock_issues
+        $pdo->prepare("INSERT INTO inv_issues
             (issue_number, requisition_number, issued_to_user_id, issued_to_department_id,
              issued_to_project, issued_by, from_location_id, cost_centre, notes, status, created_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,NOW())")
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $issueId = $pdo->lastInsertId();
 
-        $insertLine = $pdo->prepare("INSERT INTO inv_stock_issue_items
+        $insertLine = $pdo->prepare("INSERT INTO inv_issue_items
             (issue_id, item_id, quantity_requested, quantity_issued, lot_number, batch_number, serial_number)
             VALUES (?,?,?,?,?,?,?)");
 
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Deduct stock
             InventoryService::updateStockLevel($pdo, $iid, $fromLocation, $qi, 'subtract');
-            InventoryService::recordTransaction($pdo, $iid, $fromLocation, 'ISSUE', $qi, $issueId, 'inv_stock_issues',
+            InventoryService::recordTransaction($pdo, $iid, $fromLocation, 'ISSUE', $qi, $issueId, 'inv_issues',
                 "Issued to " . ($issueTo ? "user $issueTo" : "dept $issueToDept"), $_SESSION['user_id'],
                 $_POST['lot_number'][$i] ?? null, $_POST['batch_number'][$i] ?? null, $_POST['serial_number'][$i] ?? null, null);
         }
@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE inv_requisitions SET status = 'FULFILLED' WHERE requisition_id = ?")->execute([$reqId]);
         }
 
-        logInventoryAudit($pdo, 'inv_stock_issues', $issueId, 'CREATED', "Stock issued: $issueNumber");
+        logInventoryAudit($pdo, 'inv_issues', $issueId, 'CREATED', "Stock issued: $issueNumber");
         $pdo->commit();
         pop("Stock issue $issueNumber created.", "/inventory/issuing/view.php?id=$issueId", 1800, 'success');
         exit;

@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Pre-populate with all items at selected location
         $stockItems = $pdo->prepare("
             SELECT sl.item_id, sl.quantity_on_hand
-            FROM inv_stock_levels sl
+            FROM inv_stock sl
             WHERE sl.location_id = ? AND sl.quantity_on_hand > 0
         ");
         $stockItems->execute([$locationId]);

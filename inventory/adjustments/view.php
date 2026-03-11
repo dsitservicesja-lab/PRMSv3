@@ -11,8 +11,8 @@ $adj = $pdo->prepare("
     SELECT a.*, u.full_name AS creator_name, au.full_name AS approver_name,
            l.location_code, l.site_name
     FROM inv_adjustments a
-    LEFT JOIN users u ON a.created_by = u.user_id
-    LEFT JOIN users au ON a.approved_by = au.user_id
+    LEFT JOIN users u ON a.requested_by = u.user_id
+    LEFT JOIN users au ON a.supervisor_approved_by = au.user_id
     LEFT JOIN inv_locations l ON a.location_id = l.location_id
     WHERE a.adjustment_id = ?
 ");
@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && has_permission('approve_adjustment'
         $pdo->beginTransaction();
 
         if ($action === 'approve') {
-            if ($_SESSION['user_id'] == $adj['created_by']) {
+            if ($_SESSION['user_id'] == $adj['requested_by']) {
                 throw new Exception("Cannot approve your own adjustment (segregation of duties).");
             }
 
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && has_permission('approve_adjustment'
                 }
             }
 
-            $pdo->prepare("UPDATE inv_adjustments SET status = 'APPROVED', approved_by = ?, approved_at = NOW() WHERE adjustment_id = ?")
+            $pdo->prepare("UPDATE inv_adjustments SET status = 'APPROVED', supervisor_approved_by = ?, supervisor_approved_at = NOW() WHERE adjustment_id = ?")
                 ->execute([$_SESSION['user_id'], $adjId]);
             logInventoryAudit($pdo, 'inv_adjustments', $adjId, 'APPROVED', "Stock adjustment approved and applied");
 
@@ -110,11 +110,11 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                     <div class="col-md-4"><strong>Reason:</strong> <?= str_replace('_', ' ', htmlspecialchars($adj['reason_code'])) ?></div>
                     <div class="col-md-4"><strong>Created By:</strong> <?= htmlspecialchars($adj['creator_name']) ?></div>
                     <div class="col-md-4"><strong>Date:</strong> <?= date('Y-m-d H:i', strtotime($adj['created_at'])) ?></div>
-                    <?php if ($adj['approved_by']): ?>
+                    <?php if ($adj['supervisor_approved_by']): ?>
                     <div class="col-md-4"><strong>Approved By:</strong> <?= htmlspecialchars($adj['approver_name']) ?></div>
                     <?php endif; ?>
-                    <?php if ($adj['description']): ?>
-                    <div class="col-12"><strong>Description:</strong> <?= htmlspecialchars($adj['description']) ?></div>
+                    <?php if ($adj['reason_detail']): ?>
+                    <div class="col-12"><strong>Description:</strong> <?= htmlspecialchars($adj['reason_detail']) ?></div>
                     <?php endif; ?>
                     <?php if ($adj['notes']): ?>
                     <div class="col-12"><strong>Notes:</strong> <?= nl2br(htmlspecialchars($adj['notes'])) ?></div>

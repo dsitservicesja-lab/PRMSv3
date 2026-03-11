@@ -38,37 +38,36 @@ if (!inventoryTablesExist($pdo)) {
 
 /* KPI Queries */
 $stats = $pdo->query("SELECT
-    (SELECT COUNT(*) FROM inv_items WHERE status='ACTIVE') AS active_items,
+    (SELECT COUNT(*) FROM inv_items WHERE item_status='ACTIVE') AS active_items,
     (SELECT COUNT(*) FROM inv_locations WHERE is_active=1) AS active_locations,
-    (SELECT COALESCE(SUM(sl.quantity_on_hand * i.unit_cost), 0) FROM inv_stock_levels sl JOIN inv_items i ON sl.item_id = i.item_id) AS total_value,
-    (SELECT COUNT(DISTINCT i2.item_id) FROM inv_items i2 LEFT JOIN (SELECT item_id, SUM(quantity_on_hand) AS qty FROM inv_stock_levels GROUP BY item_id) s ON i2.item_id = s.item_id WHERE i2.status='ACTIVE' AND i2.reorder_point > 0 AND COALESCE(s.qty,0) <= i2.reorder_point) AS low_stock_count
+    (SELECT COALESCE(SUM(sl.quantity_on_hand * sl.unit_cost), 0) FROM inv_stock sl) AS total_value,
+    (SELECT COUNT(DISTINCT i2.item_id) FROM inv_items i2 LEFT JOIN (SELECT item_id, SUM(quantity_on_hand) AS qty FROM inv_stock GROUP BY item_id) s ON i2.item_id = s.item_id WHERE i2.item_status='ACTIVE' AND i2.reorder_level > 0 AND COALESCE(s.qty,0) <= i2.reorder_level) AS low_stock_count
 ")->fetch(PDO::FETCH_ASSOC);
 
 $pendingReqs = $pdo->query("SELECT COUNT(*) FROM inv_requisitions WHERE status='SUBMITTED'")->fetchColumn();
-$pendingGrn = $pdo->query("SELECT COUNT(*) FROM inv_goods_received_notes WHERE status IN ('DRAFT','INSPECTION')")->fetchColumn();
+$pendingGrn = $pdo->query("SELECT COUNT(*) FROM inv_goods_received WHERE status IN ('DRAFT','RECEIVED')")->fetchColumn();
 $pendingTransfers = $pdo->query("SELECT COUNT(*) FROM inv_transfers WHERE status='PENDING_APPROVAL'")->fetchColumn();
 $pendingAdj = $pdo->query("SELECT COUNT(*) FROM inv_adjustments WHERE status='PENDING_APPROVAL'")->fetchColumn();
-$pendingDisp = $pdo->query("SELECT COUNT(*) FROM inv_disposal_requests WHERE status IN ('PENDING_SURVEY','PENDING_APPROVAL')")->fetchColumn();
+$pendingDisp = $pdo->query("SELECT COUNT(*) FROM inv_disposals WHERE status IN ('RECOMMENDED','PENDING_APPROVAL')")->fetchColumn();
 
 /* Expiring soon */
 $expiringCount = $pdo->query("
-    SELECT COUNT(DISTINCT st.item_id)
-    FROM inv_stock_transactions st
-    JOIN inv_stock_levels sl ON st.item_id = sl.item_id AND st.location_id = sl.location_id
-    WHERE st.expiry_date IS NOT NULL
-      AND st.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 90 DAY)
-      AND sl.quantity_on_hand > 0
+    SELECT COUNT(DISTINCT s.item_id)
+    FROM inv_stock s
+    WHERE s.expiry_date IS NOT NULL
+      AND s.expiry_date <= DATE_ADD(CURDATE(), INTERVAL 90 DAY)
+      AND s.quantity_on_hand > 0
 ")->fetchColumn();
 
 /* Recent transactions */
 $recentTxns = $pdo->query("
-    SELECT st.transaction_type, st.quantity, st.transaction_date,
+    SELECT st.transaction_type, st.quantity, st.created_at AS transaction_date,
            i.item_code, i.item_name, l.location_code, u.full_name
-    FROM inv_stock_transactions st
+    FROM inv_transactions st
     JOIN inv_items i ON st.item_id = i.item_id
     LEFT JOIN inv_locations l ON st.location_id = l.location_id
     LEFT JOIN users u ON st.performed_by = u.user_id
-    ORDER BY st.transaction_date DESC
+    ORDER BY st.created_at DESC
     LIMIT 10
 ")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -76,10 +75,10 @@ $recentTxns = $pdo->query("
 $topItems = $pdo->query("
     SELECT i.item_code, i.item_name,
            SUM(sl.quantity_on_hand) AS total_qty,
-           SUM(sl.quantity_on_hand * i.unit_cost) AS total_value
-    FROM inv_stock_levels sl
+           SUM(sl.quantity_on_hand * sl.unit_cost) AS total_value
+    FROM inv_stock sl
     JOIN inv_items i ON sl.item_id = i.item_id
-    GROUP BY i.item_id
+    GROUP BY i.item_id, i.item_code, i.item_name
     ORDER BY total_value DESC
     LIMIT 10
 ")->fetchAll(PDO::FETCH_ASSOC);

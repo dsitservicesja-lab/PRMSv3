@@ -17,7 +17,7 @@ if ($type) { $where .= " AND t.transfer_type = ?"; $params[] = $type; }
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
 list($limit, $offset, $page) = getPaginationParams();
 
-$total = $pdo->prepare("SELECT COUNT(*) FROM inv_transfers t LEFT JOIN users u ON t.initiated_by = u.user_id WHERE $where");
+$total = $pdo->prepare("SELECT COUNT(*) FROM inv_transfers t LEFT JOIN users u ON t.requested_by = u.user_id WHERE $where");
 $total->execute($params);
 $totalRows = $total->fetchColumn();
 
@@ -26,9 +26,9 @@ $stmt = $pdo->prepare("
            fl.location_code AS from_loc, tl.location_code AS to_loc,
            (SELECT COUNT(*) FROM inv_transfer_items WHERE transfer_id = t.transfer_id) AS line_count
     FROM inv_transfers t
-    LEFT JOIN users u ON t.initiated_by = u.user_id
-    LEFT JOIN inv_locations fl ON t.from_location_id = fl.location_id
-    LEFT JOIN inv_locations tl ON t.to_location_id = tl.location_id
+    LEFT JOIN users u ON t.requested_by = u.user_id
+    LEFT JOIN inv_locations fl ON t.source_location_id = fl.location_id
+    LEFT JOIN inv_locations tl ON t.destination_location_id = tl.location_id
     WHERE $where
     ORDER BY t.created_at DESC
     LIMIT $limit OFFSET $offset

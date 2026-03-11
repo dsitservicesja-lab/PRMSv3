@@ -13,7 +13,7 @@ $where = "1=1";
 $params = [];
 
 if ($search) {
-    $where .= " AND (g.grn_number LIKE ? OR g.po_number LIKE ? OR u.full_name LIKE ? OR g.supplier_name LIKE ?)";
+    $where .= " AND (g.grn_number LIKE ? OR g.po_reference LIKE ? OR u.full_name LIKE ? OR g.supplier_name LIKE ?)";
     $s = "%$search%";
     $params = array_merge($params, [$s, $s, $s, $s]);
 }
@@ -24,14 +24,14 @@ if ($dateTo) { $where .= " AND g.received_date <= ?"; $params[] = $dateTo; }
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
 list($limit, $offset, $page) = getPaginationParams();
 
-$total = $pdo->prepare("SELECT COUNT(*) FROM inv_goods_received_notes g LEFT JOIN users u ON g.received_by = u.user_id WHERE $where");
+$total = $pdo->prepare("SELECT COUNT(*) FROM inv_goods_received g LEFT JOIN users u ON g.received_by = u.user_id WHERE $where");
 $total->execute($params);
 $totalRows = $total->fetchColumn();
 
 $stmt = $pdo->prepare("
     SELECT g.*, u.full_name AS receiver_name,
            (SELECT COUNT(*) FROM inv_grn_items WHERE grn_id = g.grn_id) AS line_count
-    FROM inv_goods_received_notes g
+    FROM inv_goods_received g
     LEFT JOIN users u ON g.received_by = u.user_id
     WHERE $where
     ORDER BY g.created_at DESC
@@ -46,7 +46,7 @@ $kpiStmt = $pdo->query("SELECT
     SUM(CASE WHEN status='COMPLETED' THEN 1 ELSE 0 END) AS completed,
     SUM(CASE WHEN status='INSPECTION' THEN 1 ELSE 0 END) AS inspection,
     SUM(CASE WHEN status='QUARANTINE' THEN 1 ELSE 0 END) AS quarantine
-    FROM inv_goods_received_notes");
+    FROM inv_goods_received");
 $kpi = $kpiStmt->fetch(PDO::FETCH_ASSOC);
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
@@ -94,7 +94,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                     <?php else: foreach ($rows as $r): ?>
                     <tr>
                         <td><a href="/inventory/receiving/view.php?id=<?= $r['grn_id'] ?>"><?= htmlspecialchars($r['grn_number']) ?></a></td>
-                        <td><?= htmlspecialchars($r['po_number'] ?: '-') ?></td>
+                        <td><?= htmlspecialchars($r['po_reference'] ?: '-') ?></td>
                         <td><?= htmlspecialchars($r['supplier_name']) ?></td>
                         <td><?= $r['received_date'] ?></td>
                         <td><?= htmlspecialchars($r['receiver_name']) ?></td>

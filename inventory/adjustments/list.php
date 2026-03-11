@@ -17,7 +17,7 @@ if ($type) { $where .= " AND a.adjustment_type = ?"; $params[] = $type; }
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
 list($limit, $offset, $page) = getPaginationParams();
 
-$total = $pdo->prepare("SELECT COUNT(*) FROM inv_adjustments a LEFT JOIN users u ON a.created_by = u.user_id WHERE $where");
+$total = $pdo->prepare("SELECT COUNT(*) FROM inv_adjustments a LEFT JOIN users u ON a.requested_by = u.user_id WHERE $where");
 $total->execute($params);
 $totalRows = $total->fetchColumn();
 
@@ -25,7 +25,7 @@ $stmt = $pdo->prepare("
     SELECT a.*, u.full_name AS creator_name, l.location_code,
            (SELECT COUNT(*) FROM inv_adjustment_items WHERE adjustment_id = a.adjustment_id) AS line_count
     FROM inv_adjustments a
-    LEFT JOIN users u ON a.created_by = u.user_id
+    LEFT JOIN users u ON a.requested_by = u.user_id
     LEFT JOIN inv_locations l ON a.location_id = l.location_id
     WHERE $where
     ORDER BY a.created_at DESC

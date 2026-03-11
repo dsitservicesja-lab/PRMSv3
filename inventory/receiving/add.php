@@ -10,7 +10,7 @@ $grn = null;
 $grnItems = [];
 
 if ($isEdit) {
-    $grn = $pdo->prepare("SELECT * FROM inv_goods_received_notes WHERE grn_id = ?");
+    $grn = $pdo->prepare("SELECT * FROM inv_goods_received WHERE grn_id = ?");
     $grn->execute([$editId]);
     $grn = $grn->fetch(PDO::FETCH_ASSOC);
     if (!$grn || !in_array($grn['status'], ['DRAFT','INSPECTION'])) {
@@ -23,7 +23,7 @@ if ($isEdit) {
 }
 
 /* Items list for selection */
-$items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items WHERE status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
+$items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items WHERE item_status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
 $locations = $pdo->query("SELECT location_id, location_code, site_name FROM inv_locations WHERE is_active=1 ORDER BY site_name, location_code")->fetchAll(PDO::FETCH_ASSOC);
 
 /* Handle POST */
@@ -59,9 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($isEdit) {
-            $pdo->prepare("UPDATE inv_goods_received_notes SET
-                po_number=?, supplier_name=?, delivery_note_number=?, invoice_number=?,
-                received_date=?, receiving_location_id=?, donor_info=?, is_non_exchange_transaction=?,
+            $pdo->prepare("UPDATE inv_goods_received SET
+                po_reference=?, supplier_name=?, delivery_note_number=?, invoice_number=?,
+                received_date=?, receiving_location_id=?, donor_source=?, is_non_exchange_transaction=?,
                 notes=?, status=?, updated_at=NOW()
                 WHERE grn_id=?")
                 ->execute([$poNumber, $supplierName, $deliveryNote, $invoiceNo,
@@ -70,10 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $grnId = $editId;
             $pdo->prepare("DELETE FROM inv_grn_items WHERE grn_id = ?")->execute([$grnId]);
         } else {
-            $grnNumber = InventoryService::generateDocNumber($pdo, 'GRN', 'inv_goods_received_notes', 'grn_number');
-            $pdo->prepare("INSERT INTO inv_goods_received_notes
-                (grn_number, po_number, supplier_name, delivery_note_number, invoice_number,
-                 received_date, received_by, receiving_location_id, donor_info,
+            $grnNumber = InventoryService::generateDocNumber($pdo, 'GRN', 'inv_goods_received', 'grn_number');
+            $pdo->prepare("INSERT INTO inv_goods_received
+                (grn_number, po_reference, supplier_name, delivery_note_number, invoice_number,
+                 received_date, received_by, receiving_location_id, donor_source,
                  is_non_exchange_transaction, notes, status, created_at)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,NOW())")
                 ->execute([$grnNumber, $poNumber, $supplierName, $deliveryNote, $invoiceNo,
@@ -116,14 +116,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($qr <= 0 || $cond === 'REJECTED') continue;
 
                 InventoryService::updateStockLevel($pdo, $iid, $locationId, $qr, 'add');
-                InventoryService::recordTransaction($pdo, $iid, $locationId, 'RECEIPT', $qr, $grnId, 'inv_goods_received_notes',
+                InventoryService::recordTransaction($pdo, $iid, $locationId, 'RECEIPT', $qr, $grnId, 'inv_goods_received',
                     "GRN receipt from $supplierName", $_SESSION['user_id'],
                     $lots[$idx] ?? null, $batches[$idx] ?? null, $serials[$idx] ?? null,
                     !empty($expiries[$idx]) ? $expiries[$idx] : null);
             }
         }
 
-        logInventoryAudit($pdo, 'inv_goods_received_notes', $grnId, $isEdit ? 'UPDATED' : 'CREATED', "GRN $statusAction");
+        logInventoryAudit($pdo, 'inv_goods_received', $grnId, $isEdit ? 'UPDATED' : 'CREATED', "GRN $statusAction");
         $pdo->commit();
         pop($isEdit ? "GRN updated." : "GRN created.", "/inventory/receiving/view.php?id=$grnId", 1800, 'success');
         exit;
@@ -152,7 +152,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label">PO Number</label>
-                    <input type="text" name="po_number" class="form-control" value="<?= htmlspecialchars($grn['po_number'] ?? '') ?>">
+                    <input type="text" name="po_number" class="form-control" value="<?= htmlspecialchars($grn['po_reference'] ?? '') ?>">
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Supplier Name <span class="text-danger">*</span></label>
@@ -183,7 +183,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">Donor Information (for non-exchange transactions)</label>
-                    <input type="text" name="donor_info" class="form-control" value="<?= htmlspecialchars($grn['donor_info'] ?? '') ?>">
+                    <input type="text" name="donor_info" class="form-control" value="<?= htmlspecialchars($grn['donor_source'] ?? '') ?>">
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
                     <div class="form-check">

@@ -5,17 +5,18 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/config/db.php';
 require_once __DIR__ . '/../check_setup.php';
 
 $rows = $pdo->query("
-    SELECT i.item_id, i.item_code, i.item_name, i.reorder_point, i.reorder_quantity,
-           c.category_name, i.criticality_level,
+    SELECT i.item_id, i.item_code, i.item_name, i.reorder_level, i.reorder_quantity,
+           c.category_name, cr.criticality_name AS criticality_level,
            COALESCE(SUM(sl.quantity_on_hand), 0) AS total_stock,
-           i.reorder_point - COALESCE(SUM(sl.quantity_on_hand), 0) AS shortfall
+           i.reorder_level - COALESCE(SUM(sl.quantity_on_hand), 0) AS shortfall
     FROM inv_items i
-    LEFT JOIN inv_stock_levels sl ON i.item_id = sl.item_id
+    LEFT JOIN inv_stock sl ON i.item_id = sl.item_id
     LEFT JOIN inv_categories c ON i.category_id = c.category_id
-    WHERE i.status = 'ACTIVE' AND i.reorder_point > 0
+    LEFT JOIN inv_criticality_classes cr ON i.criticality_id = cr.criticality_id
+    WHERE i.item_status = 'ACTIVE' AND i.reorder_level > 0
     GROUP BY i.item_id
-    HAVING total_stock <= i.reorder_point
-    ORDER BY shortfall DESC, i.criticality_level DESC
+    HAVING total_stock <= i.reorder_level
+    ORDER BY shortfall DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
@@ -47,7 +48,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                         <td><?= htmlspecialchars($r['category_name'] ?? '-') ?></td>
                         <td><span class="badge bg-<?= in_array($r['criticality_level'], ['CRITICAL','VITAL']) ? 'danger' : 'secondary' ?>"><?= $r['criticality_level'] ?></span></td>
                         <td class="text-end fw-bold"><?= number_format($r['total_stock'], 2) ?></td>
-                        <td class="text-end"><?= number_format($r['reorder_point'], 2) ?></td>
+                        <td class="text-end"><?= number_format($r['reorder_level'], 2) ?></td>
                         <td class="text-end"><?= number_format($r['reorder_quantity'], 2) ?></td>
                         <td class="text-end text-danger fw-bold"><?= number_format($r['shortfall'], 2) ?></td>
                     </tr>

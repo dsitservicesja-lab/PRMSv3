@@ -12,10 +12,10 @@ $transfer = $pdo->prepare("
            fl.location_code AS from_loc, fl.site_name AS from_site,
            tl.location_code AS to_loc, tl.site_name AS to_site
     FROM inv_transfers t
-    LEFT JOIN users u ON t.initiated_by = u.user_id
+    LEFT JOIN users u ON t.requested_by = u.user_id
     LEFT JOIN users au ON t.approved_by = au.user_id
-    LEFT JOIN inv_locations fl ON t.from_location_id = fl.location_id
-    LEFT JOIN inv_locations tl ON t.to_location_id = tl.location_id
+    LEFT JOIN inv_locations fl ON t.source_location_id = fl.location_id
+    LEFT JOIN inv_locations tl ON t.destination_location_id = tl.location_id
     WHERE t.transfer_id = ?
 ");
 $transfer->execute([$transferId]);
@@ -39,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->beginTransaction();
 
         if ($action === 'approve' && has_permission('approve_transfer')) {
-            if ($_SESSION['user_id'] == $transfer['initiated_by']) {
+            if ($_SESSION['user_id'] == $transfer['requested_by']) {
                 throw new Exception("Cannot approve your own transfer (segregation of duties).");
             }
             $pdo->prepare("UPDATE inv_transfers SET status = 'APPROVED', approved_by = ?, approved_at = NOW() WHERE transfer_id = ?")
@@ -49,10 +49,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'dispatch' && $transfer['status'] === 'APPROVED') {
             // Deduct stock from source
             foreach ($lineItems as $li) {
-                InventoryService::updateStockLevel($pdo, $li['item_id'], $transfer['from_location_id'], $li['quantity_sent'], 'subtract');
-                InventoryService::recordTransaction($pdo, $li['item_id'], $transfer['from_location_id'], 'TRANSFER_OUT', $li['quantity_sent'],
+                InventoryService::updateStockLevel($pdo, $li['item_id'], $transfer['source_location_id'], $li['quantity'], 'subtract');
+                InventoryService::recordTransaction($pdo, $li['item_id'], $transfer['source_location_id'], 'TRANSFER_OUT', $li['quantity'],
                     $transferId, 'inv_transfers', "Transfer to " . $transfer['to_loc'], $_SESSION['user_id'],
-                    $li['lot_number'], $li['batch_number'], $li['serial_number'], null);
+                    $li['batch_lot_number'], null, $li['serial_number'], null);
             }
             $pdo->prepare("UPDATE inv_transfers SET status = 'IN_TRANSIT', dispatched_at = NOW() WHERE transfer_id = ?")
                 ->execute([$transferId]);
@@ -61,15 +61,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($action === 'receive' && $transfer['status'] === 'IN_TRANSIT') {
             // Add stock to destination
             foreach ($lineItems as $idx => $li) {
-                $qtyReceived = (float) ($_POST['qty_received'][$li['transfer_item_id']] ?? $li['quantity_sent']);
+                $qtyReceived = (float) ($_POST['qty_received'][$li['transfer_item_id']] ?? $li['quantity']);
                 $pdo->prepare("UPDATE inv_transfer_items SET quantity_received = ? WHERE transfer_item_id = ?")
                     ->execute([$qtyReceived, $li['transfer_item_id']]);
 
                 if ($qtyReceived > 0) {
-                    InventoryService::updateStockLevel($pdo, $li['item_id'], $transfer['to_location_id'], $qtyReceived, 'add');
-                    InventoryService::recordTransaction($pdo, $li['item_id'], $transfer['to_location_id'], 'TRANSFER_IN', $qtyReceived,
+                    InventoryService::updateStockLevel($pdo, $li['item_id'], $transfer['destination_location_id'], $qtyReceived, 'add');
+                    InventoryService::recordTransaction($pdo, $li['item_id'], $transfer['destination_location_id'], 'TRANSFER_IN', $qtyReceived,
                         $transferId, 'inv_transfers', "Transfer from " . $transfer['from_loc'], $_SESSION['user_id'],
-                        $li['lot_number'], $li['batch_number'], $li['serial_number'], null);
+                        $li['batch_lot_number'], null, $li['serial_number'], null);
                 }
             }
             $pdo->prepare("UPDATE inv_transfers SET status = 'COMPLETED', received_at = NOW() WHERE transfer_id = ?")
@@ -126,7 +126,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                     <?php if ($transfer['approved_by']): ?>
                     <div class="col-md-4"><strong>Approved By:</strong> <?= htmlspecialchars($transfer['approver_name']) ?></div>
                     <?php endif; ?>
-                    <div class="col-md-6"><strong>Reason:</strong> <?= htmlspecialchars($transfer['reason'] ?? '-') ?></div>
+                    <div class="col-md-6"><strong>Reason:</strong> <?= htmlspecialchars($transfer['notes'] ?? '-') ?></div>
                     <?php if ($transfer['notes']): ?>
                     <div class="col-12"><strong>Notes:</strong> <?= nl2br(htmlspecialchars($transfer['notes'])) ?></div>
                     <?php endif; ?>
@@ -161,7 +161,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
             <?php foreach ($lineItems as $li): ?>
             <div class="input-group mb-2">
                 <span class="input-group-text"><?= htmlspecialchars($li['item_code']) ?></span>
-                <input type="number" step="0.01" name="qty_received[<?= $li['transfer_item_id'] ?>]" class="form-control text-end" value="<?= $li['quantity_sent'] ?>" max="<?= $li['quantity_sent'] ?>">
+                <input type="number" step="0.01" name="qty_received[<?= $li['transfer_item_id'] ?>]" class="form-control text-end" value="<?= $li['quantity'] ?>" max="<?= $li['quantity'] ?>">
             </div>
             <?php endforeach; ?>
             <button type="submit" name="action" value="receive" class="btn btn-success w-100 btn-lg">
@@ -185,10 +185,10 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                     <tr>
                         <td><code><?= htmlspecialchars($li['item_code']) ?></code></td>
                         <td><?= htmlspecialchars($li['item_name']) ?></td>
-                        <td><?= htmlspecialchars($li['lot_number'] ?: '-') ?></td>
-                        <td><?= htmlspecialchars($li['batch_number'] ?: '-') ?></td>
+                        <td><?= htmlspecialchars($li['batch_lot_number'] ?: '-') ?></td>
+                        <td>-</td>
                         <td><?= htmlspecialchars($li['serial_number'] ?: '-') ?></td>
-                        <td class="text-end fw-bold"><?= number_format($li['quantity_sent'], 2) ?></td>
+                        <td class="text-end fw-bold"><?= number_format($li['quantity'], 2) ?></td>
                         <td class="text-end"><?= $li['quantity_received'] !== null ? number_format($li['quantity_received'], 2) : '-' ?></td>
                         <td><?= htmlspecialchars($li['uom_code'] ?? '-') ?></td>
                     </tr>

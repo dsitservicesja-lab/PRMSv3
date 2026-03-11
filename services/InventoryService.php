@@ -5,7 +5,6 @@
  */
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/db.php';
-require_once $_SERVER['DOCUMENT_ROOT'] . '/config/audit.php';
 
 /* ================================================================
    MIGRATION CHECK
@@ -467,4 +466,59 @@ function getInvRoles(PDO $pdo): array
 function logInventoryAudit(PDO $pdo, string $table, ?int $recordId, string $action, ?string $notes = null): void
 {
     logAudit($pdo, $table, $recordId, $action, $notes);
+}
+
+/* ================================================================
+   STATIC FACADE CLASS
+   Provides InventoryService::method() wrappers used by module files.
+================================================================ */
+
+class InventoryService
+{
+    /** Generate a sequential document number. */
+    public static function generateDocNumber(PDO $pdo, string $prefix, string $table, string $column): string
+    {
+        return generateInventoryNumber($pdo, $prefix, $table, $column);
+    }
+
+    /** Get total usable stock at a specific location. */
+    public static function getStockLevel(PDO $pdo, int $itemId, int $locationId): float
+    {
+        $batches = getStockAtLocation($pdo, $itemId, $locationId);
+        $total = 0;
+        foreach ($batches as $b) {
+            $total += (float) $b['quantity_on_hand'];
+        }
+        return $total;
+    }
+
+    /** Increase or decrease stock at a location. */
+    public static function updateStockLevel(PDO $pdo, int $itemId, int $locationId, float $qty, string $direction = 'add'): void
+    {
+        if ($direction === 'add') {
+            increaseStock($pdo, $itemId, $locationId, $qty);
+        } else {
+            decreaseStock($pdo, $itemId, $locationId, $qty);
+        }
+    }
+
+    /** Record a stock transaction. */
+    public static function recordTransaction(
+        PDO $pdo, int $itemId, int $locationId, string $type, float $qty,
+        ?int $refId = null, ?string $refType = null, ?string $notes = null, ?int $userId = null,
+        ?string $lotNumber = null, ?string $batchNumber = null, ?string $serialNumber = null, ?string $expiryDate = null
+    ): int {
+        return recordStockTransaction($pdo, [
+            'transaction_type' => $type,
+            'item_id'         => $itemId,
+            'location_id'     => $locationId,
+            'quantity'         => $qty,
+            'reference_type'  => $refType,
+            'reference_id'    => $refId,
+            'batch_lot_number'=> $lotNumber ?? $batchNumber,
+            'serial_number'   => $serialNumber,
+            'expiry_date'     => $expiryDate,
+            'notes'           => $notes,
+        ]);
+    }
 }

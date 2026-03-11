@@ -9,7 +9,7 @@ if ($grnId <= 0) { pop("Invalid GRN.", "/inventory/receiving/list.php", 1800, 'w
 
 $grn = $pdo->prepare("
     SELECT g.*, u.full_name AS receiver_name, l.location_code, l.site_name
-    FROM inv_goods_received_notes g
+    FROM inv_goods_received g
     JOIN users u ON g.received_by = u.user_id
     LEFT JOIN inv_locations l ON g.receiving_location_id = l.location_id
     WHERE g.grn_id = ?
@@ -45,7 +45,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
     <div class="card-body">
         <div class="row g-3">
             <div class="col-md-3"><strong>GRN #:</strong> <?= htmlspecialchars($grn['grn_number']) ?></div>
-            <div class="col-md-3"><strong>PO #:</strong> <?= htmlspecialchars($grn['po_number'] ?: '-') ?></div>
+            <div class="col-md-3"><strong>PO #:</strong> <?= htmlspecialchars($grn['po_reference'] ?: '-') ?></div>
             <div class="col-md-3"><strong>Supplier:</strong> <?= htmlspecialchars($grn['supplier_name']) ?></div>
             <div class="col-md-3"><strong>Status:</strong>
                 <?php $sc = match($grn['status']) { 'COMPLETED' => 'success', 'INSPECTION' => 'warning', 'QUARANTINE' => 'danger', 'DRAFT' => 'secondary', default => 'light' }; ?>
@@ -61,8 +61,8 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
             <?php if ($grn['is_non_exchange_transaction']): ?>
             <div class="col-md-3"><span class="badge bg-info">Non-Exchange Transaction</span></div>
             <?php endif; ?>
-            <?php if ($grn['donor_info']): ?>
-            <div class="col-md-6"><strong>Donor:</strong> <?= htmlspecialchars($grn['donor_info']) ?></div>
+            <?php if ($grn['donor_source']): ?>
+            <div class="col-md-6"><strong>Donor:</strong> <?= htmlspecialchars($grn['donor_source']) ?></div>
             <?php endif; ?>
             <?php if ($grn['notes']): ?>
             <div class="col-12"><strong>Notes:</strong> <?= nl2br(htmlspecialchars($grn['notes'])) ?></div>

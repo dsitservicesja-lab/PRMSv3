@@ -4,7 +4,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/config/page_guard.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/db.php';
 require_once __DIR__ . '/../check_setup.php';
 
-$items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items WHERE status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
+$items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items WHERE item_status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
 $locations = $pdo->query("SELECT location_id, location_code, site_name FROM inv_locations WHERE is_active=1 ORDER BY site_name")->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -34,17 +34,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $transferNumber = InventoryService::generateDocNumber($pdo, 'TRF', 'inv_transfers', 'transfer_number');
 
         $pdo->prepare("INSERT INTO inv_transfers
-            (transfer_number, transfer_type, from_location_id, to_location_id, initiated_by,
-             reason, notes, status, created_at)
-            VALUES (?,?,?,?,?,?,?,?,NOW())")
+            (transfer_number, transfer_type, source_location_id, destination_location_id, requested_by,
+             notes, status, created_at)
+            VALUES (?,?,?,?,?,?,?,NOW())")
             ->execute([$transferNumber, $transferType, $fromLocId, $toLocId,
-                $_SESSION['user_id'], $reason, $notes, $initialStatus]);
+                $_SESSION['user_id'], ($reason ? $reason . "\n" : '') . $notes, $initialStatus]);
 
         $transferId = $pdo->lastInsertId();
 
         $insertItem = $pdo->prepare("INSERT INTO inv_transfer_items
-            (transfer_id, item_id, quantity_sent, lot_number, batch_number, serial_number)
-            VALUES (?,?,?,?,?,?)");
+            (transfer_id, item_id, quantity, batch_lot_number, serial_number)
+            VALUES (?,?,?,?,?)");
 
         for ($i = 0; $i < count($itemIds); $i++) {
             $iid = (int) ($itemIds[$i] ?? 0);
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $insertItem->execute([$transferId, $iid, $qty,
-                $_POST['lot_number'][$i] ?? null, $_POST['batch_number'][$i] ?? null, $_POST['serial_number'][$i] ?? null]);
+                $_POST['lot_number'][$i] ?? $_POST['batch_number'][$i] ?? null, $_POST['serial_number'][$i] ?? null]);
         }
 
         logInventoryAudit($pdo, 'inv_transfers', $transferId, 'CREATED', "Transfer $transferNumber ($transferType)");

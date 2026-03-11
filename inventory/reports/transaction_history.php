@@ -10,7 +10,7 @@ $typeFilter = $_GET['type'] ?? '';
 $dateFrom = $_GET['date_from'] ?? date('Y-m-01');
 $dateTo = $_GET['date_to'] ?? date('Y-m-d');
 
-$where = "st.transaction_date BETWEEN ? AND ?";
+$where = "st.created_at BETWEEN ? AND ?";
 $params = [$dateFrom, $dateTo . ' 23:59:59'];
 if ($itemFilter > 0) { $where .= " AND st.item_id = ?"; $params[] = $itemFilter; }
 if ($locationFilter > 0) { $where .= " AND st.location_id = ?"; $params[] = $locationFilter; }
@@ -19,18 +19,18 @@ if ($typeFilter) { $where .= " AND st.transaction_type = ?"; $params[] = $typeFi
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
 list($limit, $offset, $page) = getPaginationParams();
 
-$total = $pdo->prepare("SELECT COUNT(*) FROM inv_stock_transactions st WHERE $where");
+$total = $pdo->prepare("SELECT COUNT(*) FROM inv_transactions st WHERE $where");
 $total->execute($params);
 $totalRows = $total->fetchColumn();
 
 $stmt = $pdo->prepare("
     SELECT st.*, i.item_code, i.item_name, l.location_code, u.full_name AS user_name
-    FROM inv_stock_transactions st
+    FROM inv_transactions st
     JOIN inv_items i ON st.item_id = i.item_id
     LEFT JOIN inv_locations l ON st.location_id = l.location_id
     LEFT JOIN users u ON st.performed_by = u.user_id
     WHERE $where
-    ORDER BY st.transaction_date DESC
+    ORDER BY st.created_at DESC
     LIMIT $limit OFFSET $offset
 ");
 $stmt->execute($params);
@@ -38,7 +38,7 @@ $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
 $locations = $pdo->query("SELECT location_id, location_code FROM inv_locations ORDER BY location_code")->fetchAll(PDO::FETCH_ASSOC);
-$txnTypes = ['RECEIPT','ISSUE','TRANSFER_IN','TRANSFER_OUT','ADJUSTMENT_IN','ADJUSTMENT_OUT','DISPOSAL','RETURN'];
+$txnTypes = ['RECEIVE','ISSUE','TRANSFER_IN','TRANSFER_OUT','ADJUSTMENT_GAIN','ADJUSTMENT_LOSS','DISPOSAL','COUNT_ADJUST','RETURN'];
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
 ?>
@@ -90,19 +90,19 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                     <tr><td colspan="8" class="text-center text-muted py-4">No transactions found</td></tr>
                     <?php else: foreach ($rows as $r): ?>
                     <tr>
-                        <td><?= date('Y-m-d H:i', strtotime($r['transaction_date'])) ?></td>
+                        <td><?= date('Y-m-d H:i', strtotime($r['created_at'])) ?></td>
                         <td><code><?= htmlspecialchars($r['item_code']) ?></code> <?= htmlspecialchars($r['item_name']) ?></td>
                         <td><?= htmlspecialchars($r['location_code'] ?? '-') ?></td>
                         <td>
                             <?php $tc = match($r['transaction_type']) {
-                                'RECEIPT','TRANSFER_IN','ADJUSTMENT_IN','RETURN' => 'success',
-                                'ISSUE','TRANSFER_OUT','ADJUSTMENT_OUT','DISPOSAL' => 'danger',
+                                'RECEIVE','TRANSFER_IN','ADJUSTMENT_GAIN','RETURN' => 'success',
+                                'ISSUE','TRANSFER_OUT','ADJUSTMENT_LOSS','DISPOSAL' => 'danger',
                                 default => 'secondary'
                             }; ?>
                             <span class="badge bg-<?= $tc ?>"><?= str_replace('_', ' ', $r['transaction_type']) ?></span>
                         </td>
                         <td class="text-end fw-bold"><?= number_format($r['quantity'], 2) ?></td>
-                        <td><?= htmlspecialchars($r['reference_table'] . '#' . $r['reference_id']) ?></td>
+                        <td><?= htmlspecialchars($r['reference_type'] . '#' . $r['reference_id']) ?></td>
                         <td><?= htmlspecialchars($r['user_name'] ?? '-') ?></td>
                         <td><?= htmlspecialchars(mb_substr($r['notes'] ?? '', 0, 50)) ?></td>
                     </tr>

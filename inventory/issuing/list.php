@@ -19,14 +19,14 @@ if ($status) { $where .= " AND si.status = ?"; $params[] = $status; }
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
 list($limit, $offset, $page) = getPaginationParams();
 
-$total = $pdo->prepare("SELECT COUNT(*) FROM inv_stock_issues si LEFT JOIN users u ON si.issued_by = u.user_id LEFT JOIN users r ON si.issued_to_user_id = r.user_id WHERE $where");
+$total = $pdo->prepare("SELECT COUNT(*) FROM inv_issues si LEFT JOIN users u ON si.issued_by = u.user_id LEFT JOIN users r ON si.issued_to_user_id = r.user_id WHERE $where");
 $total->execute($params);
 $totalRows = $total->fetchColumn();
 
 $stmt = $pdo->prepare("
     SELECT si.*, u.full_name AS issuer_name, r.full_name AS recipient_name, b.branch_name,
-           (SELECT COUNT(*) FROM inv_stock_issue_items WHERE issue_id = si.issue_id) AS line_count
-    FROM inv_stock_issues si
+           (SELECT COUNT(*) FROM inv_issue_items WHERE issue_id = si.issue_id) AS line_count
+    FROM inv_issues si
     LEFT JOIN users u ON si.issued_by = u.user_id
     LEFT JOIN users r ON si.issued_to_user_id = r.user_id
     LEFT JOIN branches b ON si.issued_to_department_id = b.branch_id
@@ -41,7 +41,7 @@ $kpi = $pdo->query("SELECT COUNT(*) AS total,
     SUM(CASE WHEN status='COMPLETED' THEN 1 ELSE 0 END) AS completed,
     SUM(CASE WHEN status='PENDING_APPROVAL' THEN 1 ELSE 0 END) AS pending,
     SUM(CASE WHEN status='PARTIAL' THEN 1 ELSE 0 END) AS partial
-    FROM inv_stock_issues")->fetch(PDO::FETCH_ASSOC);
+    FROM inv_issues")->fetch(PDO::FETCH_ASSOC);
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
 ?>

@@ -8,20 +8,18 @@ $days = (int) ($_GET['days'] ?? 90);
 
 $rows = $pdo->prepare("
     SELECT i.item_id, i.item_code, i.item_name, c.category_name,
-           sl.location_id, l.location_code,
-           st.expiry_date, st.lot_number, st.batch_number,
-           sl.quantity_on_hand,
-           DATEDIFF(st.expiry_date, CURDATE()) AS days_to_expiry
-    FROM inv_stock_transactions st
-    JOIN inv_items i ON st.item_id = i.item_id
+           s.location_id, l.location_code,
+           s.expiry_date, s.batch_lot_number,
+           s.quantity_on_hand,
+           DATEDIFF(s.expiry_date, CURDATE()) AS days_to_expiry
+    FROM inv_stock s
+    JOIN inv_items i ON s.item_id = i.item_id
     LEFT JOIN inv_categories c ON i.category_id = c.category_id
-    LEFT JOIN inv_stock_levels sl ON st.item_id = sl.item_id AND st.location_id = sl.location_id
-    LEFT JOIN inv_locations l ON st.location_id = l.location_id
-    WHERE st.expiry_date IS NOT NULL
-      AND st.expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
-      AND sl.quantity_on_hand > 0
-    GROUP BY i.item_id, st.location_id, st.expiry_date, st.lot_number, st.batch_number
-    ORDER BY st.expiry_date ASC
+    LEFT JOIN inv_locations l ON s.location_id = l.location_id
+    WHERE s.expiry_date IS NOT NULL
+      AND s.expiry_date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+      AND s.quantity_on_hand > 0
+    ORDER BY s.expiry_date ASC
 ");
 $rows->execute([$days]);
 $rows = $rows->fetchAll(PDO::FETCH_ASSOC);
@@ -68,7 +66,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                         <td><?= htmlspecialchars($r['item_name']) ?></td>
                         <td><?= htmlspecialchars($r['category_name'] ?? '-') ?></td>
                         <td><?= htmlspecialchars($r['location_code'] ?? '-') ?></td>
-                        <td><?= htmlspecialchars(($r['lot_number'] ?? '') . '/' . ($r['batch_number'] ?? '')) ?></td>
+                        <td><?= htmlspecialchars($r['batch_lot_number'] ?? '-') ?></td>
                         <td><?= $r['expiry_date'] ?></td>
                         <td class="text-end fw-bold text-<?= $r['days_to_expiry'] <= 0 ? 'danger' : 'warning' ?>">
                             <?= $r['days_to_expiry'] <= 0 ? 'EXPIRED' : $r['days_to_expiry'] . 'd' ?>

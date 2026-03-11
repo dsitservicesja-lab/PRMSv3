@@ -4,7 +4,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/config/page_guard.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/db.php';
 require_once __DIR__ . '/../check_setup.php';
 
-$items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items WHERE status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
+$items = $pdo->query("SELECT item_id, item_code, item_name FROM inv_items WHERE item_status='ACTIVE' ORDER BY item_name")->fetchAll(PDO::FETCH_ASSOC);
 $locations = $pdo->query("SELECT location_id, location_code, site_name FROM inv_locations WHERE is_active=1 ORDER BY site_name")->fetchAll(PDO::FETCH_ASSOC);
 
 $disposalMethods = ['SALE','AUCTION','DONATION','DESTRUCTION','RECYCLING','TRADE_IN','RETURN_TO_SUPPLIER','CANNIBALIZATION'];
@@ -28,9 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $values     = $_POST['estimated_value'] ?? [];
         if (empty($itemIds) || count(array_filter($itemIds)) === 0) throw new Exception("At least one item is required.");
 
-        $dispNumber = InventoryService::generateDocNumber($pdo, 'DSP', 'inv_disposal_requests', 'disposal_number');
+        $dispNumber = InventoryService::generateDocNumber($pdo, 'DSP', 'inv_disposals', 'disposal_number');
 
-        $pdo->prepare("INSERT INTO inv_disposal_requests
+        $pdo->prepare("INSERT INTO inv_disposals
             (disposal_number, disposal_method, reason, location_id, requested_by, notes, status, created_at)
             VALUES (?,?,?,?,?,?,?,NOW())")
             ->execute([$dispNumber, $method, $reason, $locationId, $_SESSION['user_id'], $notes, 'PENDING_SURVEY']);
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $conditions[$i] ?? '', (float) ($values[$i] ?? 0)]);
         }
 
-        logInventoryAudit($pdo, 'inv_disposal_requests', $dispId, 'CREATED', "Disposal request $dispNumber");
+        logInventoryAudit($pdo, 'inv_disposals', $dispId, 'CREATED', "Disposal request $dispNumber");
         $pdo->commit();
         pop("Disposal request $dispNumber submitted.", "/inventory/disposal/view.php?id=$dispId", 1800, 'success');
         exit;

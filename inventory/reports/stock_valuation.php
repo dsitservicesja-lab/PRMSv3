@@ -14,9 +14,9 @@ if ($categoryFilter > 0) { $where .= " AND i.category_id = ?"; $params[] = $cate
 
 $stmt = $pdo->prepare("
     SELECT i.item_code, i.item_name, i.valuation_method, c.category_name,
-           l.location_code, sl.quantity_on_hand, i.unit_cost,
-           (sl.quantity_on_hand * i.unit_cost) AS total_value
-    FROM inv_stock_levels sl
+           l.location_code, sl.quantity_on_hand, sl.unit_cost,
+           (sl.quantity_on_hand * sl.unit_cost) AS total_value
+    FROM inv_stock sl
     JOIN inv_items i ON sl.item_id = i.item_id
     LEFT JOIN inv_categories c ON i.category_id = c.category_id
     LEFT JOIN inv_locations l ON sl.location_id = l.location_id

@@ -10,7 +10,7 @@ if ($dispId <= 0) { pop("Invalid disposal.", "/inventory/disposal/list.php", 180
 $disp = $pdo->prepare("
     SELECT d.*, u.full_name AS requester_name, au.full_name AS approver_name,
            l.location_code, l.site_name
-    FROM inv_disposal_requests d
+    FROM inv_disposals d
     LEFT JOIN users u ON d.requested_by = u.user_id
     LEFT JOIN users au ON d.approved_by = au.user_id
     LEFT JOIN inv_locations l ON d.location_id = l.location_id
@@ -38,17 +38,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($action === 'complete_survey' && $disp['status'] === 'PENDING_SURVEY') {
             $surveyNotes = trim($_POST['survey_notes'] ?? '');
-            $pdo->prepare("UPDATE inv_disposal_requests SET status = 'PENDING_APPROVAL', survey_notes = ?, survey_completed_by = ?, survey_completed_at = NOW() WHERE disposal_id = ?")
+            $pdo->prepare("UPDATE inv_disposals SET status = 'PENDING_APPROVAL', survey_notes = ?, survey_completed_by = ?, survey_completed_at = NOW() WHERE disposal_id = ?")
                 ->execute([$surveyNotes, $_SESSION['user_id'], $dispId]);
-            logInventoryAudit($pdo, 'inv_disposal_requests', $dispId, 'SURVEYED', "Survey completed");
+            logInventoryAudit($pdo, 'inv_disposals', $dispId, 'SURVEYED', "Survey completed");
 
         } elseif ($action === 'approve' && has_permission('approve_disposal')) {
             if ($_SESSION['user_id'] == $disp['requested_by']) {
                 throw new Exception("Cannot approve your own disposal (segregation of duties).");
             }
-            $pdo->prepare("UPDATE inv_disposal_requests SET status = 'APPROVED', approved_by = ?, approved_at = NOW() WHERE disposal_id = ?")
+            $pdo->prepare("UPDATE inv_disposals SET status = 'APPROVED', approved_by = ?, approved_at = NOW() WHERE disposal_id = ?")
                 ->execute([$_SESSION['user_id'], $dispId]);
-            logInventoryAudit($pdo, 'inv_disposal_requests', $dispId, 'APPROVED', "Disposal approved");
+            logInventoryAudit($pdo, 'inv_disposals', $dispId, 'APPROVED', "Disposal approved");
 
         } elseif ($action === 'complete' && $disp['status'] === 'APPROVED') {
             $proceeds = (float) ($_POST['actual_proceeds'] ?? 0);
@@ -56,18 +56,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($lineItems as $li) {
                 InventoryService::updateStockLevel($pdo, $li['item_id'], $disp['location_id'], $li['quantity'], 'subtract');
                 InventoryService::recordTransaction($pdo, $li['item_id'], $disp['location_id'], 'DISPOSAL', $li['quantity'],
-                    $dispId, 'inv_disposal_requests', "Disposed: " . $disp['disposal_method'], $_SESSION['user_id']);
+                    $dispId, 'inv_disposals', "Disposed: " . $disp['disposal_method'], $_SESSION['user_id']);
             }
-            $pdo->prepare("UPDATE inv_disposal_requests SET status = 'COMPLETED', actual_proceeds = ?, completed_at = NOW() WHERE disposal_id = ?")
+            $pdo->prepare("UPDATE inv_disposals SET status = 'COMPLETED', actual_proceeds = ?, completed_at = NOW() WHERE disposal_id = ?")
                 ->execute([$proceeds, $dispId]);
-            logInventoryAudit($pdo, 'inv_disposal_requests', $dispId, 'COMPLETED', "Disposal completed, proceeds: $proceeds");
+            logInventoryAudit($pdo, 'inv_disposals', $dispId, 'COMPLETED', "Disposal completed, proceeds: $proceeds");
 
         } elseif ($action === 'reject' && has_permission('approve_disposal')) {
             $reason = trim($_POST['rejection_reason'] ?? '');
             if (empty($reason)) throw new Exception("Rejection reason is required.");
-            $pdo->prepare("UPDATE inv_disposal_requests SET status = 'REJECTED', notes = CONCAT(IFNULL(notes,''), '\nRejected: ', ?) WHERE disposal_id = ?")
+            $pdo->prepare("UPDATE inv_disposals SET status = 'REJECTED', notes = CONCAT(IFNULL(notes,''), '\nRejected: ', ?) WHERE disposal_id = ?")
                 ->execute([$reason, $dispId]);
-            logInventoryAudit($pdo, 'inv_disposal_requests', $dispId, 'REJECTED', "Rejected: $reason");
+            logInventoryAudit($pdo, 'inv_disposals', $dispId, 'REJECTED', "Rejected: $reason");
         }
 
         $pdo->commit();
