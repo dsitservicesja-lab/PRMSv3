@@ -15,7 +15,7 @@ if ($status) { $where .= " AND a.status = ?"; $params[] = $status; }
 if ($type) { $where .= " AND a.adjustment_type = ?"; $params[] = $type; }
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
-list($limit, $offset, $page) = getPaginationParams();
+extract(getPaginationParams());
 
 $total = $pdo->prepare("SELECT COUNT(*) FROM inv_adjustments a LEFT JOIN users u ON a.requested_by = u.user_id WHERE $where");
 $total->execute($params);
@@ -29,7 +29,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN inv_locations l ON a.location_id = l.location_id
     WHERE $where
     ORDER BY a.created_at DESC
-    LIMIT $limit OFFSET $offset
+    LIMIT $perPage OFFSET $offset
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -107,5 +107,5 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
     </div>
 </div>
 
-<?php renderPagination($page, ceil($totalRows / $limit), $_GET); ?>
+<?php renderPagination($totalRows, $perPage, $page, $_GET); ?>
 <?php require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/footer.php'; ?>

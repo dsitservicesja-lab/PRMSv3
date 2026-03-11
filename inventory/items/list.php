@@ -98,7 +98,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
     <div class="col-md-2">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body">
-                <div class="fs-4 fw-bold text-primary"><?= number_format($kpi['total_items']) ?></div>
+                <div class="fs-4 fw-bold text-primary"><?= number_format((int)$kpi['total_items']) ?></div>
                 <small class="text-muted">Total Items</small>
             </div>
         </div>
@@ -106,7 +106,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
     <div class="col-md-2">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body">
-                <div class="fs-4 fw-bold text-success"><?= number_format($kpi['active_items']) ?></div>
+                <div class="fs-4 fw-bold text-success"><?= number_format((int)$kpi['active_items']) ?></div>
                 <small class="text-muted">Active</small>
             </div>
         </div>
@@ -122,7 +122,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
     <div class="col-md-2">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body">
-                <div class="fs-4 fw-bold text-secondary"><?= number_format($kpi['obsolete_items']) ?></div>
+                <div class="fs-4 fw-bold text-secondary"><?= number_format((int)$kpi['obsolete_items']) ?></div>
                 <small class="text-muted">Obsolete</small>
             </div>
         </div>
@@ -130,7 +130,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
     <div class="col-md-2">
         <div class="card border-0 shadow-sm text-center">
             <div class="card-body">
-                <div class="fs-4 fw-bold text-danger"><?= number_format($kpi['quarantined_items']) ?></div>
+                <div class="fs-4 fw-bold text-danger"><?= number_format((int)$kpi['quarantined_items']) ?></div>
                 <small class="text-muted">Quarantined</small>
             </div>
         </div>

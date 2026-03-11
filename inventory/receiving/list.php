@@ -22,7 +22,7 @@ if ($dateFrom) { $where .= " AND g.received_date >= ?"; $params[] = $dateFrom; }
 if ($dateTo) { $where .= " AND g.received_date <= ?"; $params[] = $dateTo; }
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
-list($limit, $offset, $page) = getPaginationParams();
+extract(getPaginationParams());
 
 $total = $pdo->prepare("SELECT COUNT(*) FROM inv_goods_received g LEFT JOIN users u ON g.received_by = u.user_id WHERE $where");
 $total->execute($params);
@@ -35,7 +35,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN users u ON g.received_by = u.user_id
     WHERE $where
     ORDER BY g.created_at DESC
-    LIMIT $limit OFFSET $offset
+    LIMIT $perPage OFFSET $offset
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -112,6 +112,6 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
     </div>
 </div>
 
-<?php renderPagination($page, ceil($totalRows / $limit), $_GET); ?>
+<?php renderPagination($totalRows, $perPage, $page, $_GET); ?>
 
 <?php require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/footer.php'; ?>

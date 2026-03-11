@@ -137,4 +137,31 @@ ALTER TABLE `inv_adjustment_items`
   ADD COLUMN IF NOT EXISTS `quantity_actual` decimal(14,4) DEFAULT NULL AFTER `quantity_system`,
   ADD COLUMN IF NOT EXISTS `quantity_variance` decimal(14,4) DEFAULT NULL AFTER `quantity_actual`;
 
+-- ============================================================
+-- 15. Fix permission name mismatches
+--     PHP uses these names but they weren't seeded in 019
+-- ============================================================
+INSERT INTO `permissions` (`name`, `description`) VALUES
+('dispose_stock', 'Create disposal/write-off requests'),
+('adjust_stock', 'Create stock adjustments'),
+('transfer_stock', 'Create stock transfers'),
+('view_inventory_reports', 'View inventory reports')
+ON DUPLICATE KEY UPDATE `description` = VALUES(`description`);
+
+-- Grant to HOD (role 4): approve + operational permissions
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT 4, id FROM `permissions` WHERE `name` IN ('view_inventory_reports', 'dispose_stock');
+
+-- Grant to Procurement Officer (role 2)
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT 2, id FROM `permissions` WHERE `name` IN ('transfer_stock', 'adjust_stock', 'dispose_stock', 'view_inventory_reports');
+
+-- Grant to Finance Officer (role 3)
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT 3, id FROM `permissions` WHERE `name` IN ('view_inventory_reports');
+
+-- Grant to Requestor (role 12)
+INSERT IGNORE INTO `role_permissions` (`role_id`, `permission_id`)
+SELECT 12, id FROM `permissions` WHERE `name` IN ('view_inventory_reports');
+
 SET FOREIGN_KEY_CHECKS = 1;

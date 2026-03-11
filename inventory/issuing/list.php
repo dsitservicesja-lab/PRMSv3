@@ -17,7 +17,7 @@ if ($search) {
 if ($status) { $where .= " AND si.status = ?"; $params[] = $status; }
 
 require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/pagination.php';
-list($limit, $offset, $page) = getPaginationParams();
+extract(getPaginationParams());
 
 $total = $pdo->prepare("SELECT COUNT(*) FROM inv_issues si LEFT JOIN users u ON si.issued_by = u.user_id LEFT JOIN users r ON si.issued_to_user_id = r.user_id WHERE $where");
 $total->execute($params);
@@ -32,7 +32,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN branches b ON si.issued_to_department_id = b.branch_id
     WHERE $where
     ORDER BY si.created_at DESC
-    LIMIT $limit OFFSET $offset
+    LIMIT $perPage OFFSET $offset
 ");
 $stmt->execute($params);
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -102,5 +102,5 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
     </div>
 </div>
 
-<?php renderPagination($page, ceil($totalRows / $limit), $_GET); ?>
+<?php renderPagination($totalRows, $perPage, $page, $_GET); ?>
 <?php require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/footer.php'; ?>
