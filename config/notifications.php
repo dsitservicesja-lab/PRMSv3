@@ -1487,4 +1487,273 @@ HTML;
     }
 }
 
+/**
+ * Notify Procurement Officers when a branch head approves a request
+ * This allows procurement to begin work immediately upon approval
+ */
+function notifyProcurementOfApproval(int $requestId, string $approvalStatus): bool {
+    if (!notificationsEnabled()) return false;
+
+    global $pdo;
+    try {
+        // Get request details
+        $stmt = $pdo->prepare("
+            SELECT pr.request_id, pr.request_number, pr.estimated_value, pr.currency, pr.request_type,
+                   pr.created_by, pr.branch_id, b.branch_name, u.full_name as requestor_name,
+                   a.full_name as approver_name, pr.approved_at
+            FROM procurement_requests pr
+            LEFT JOIN branches b ON pr.branch_id = b.branch_id
+            LEFT JOIN users u ON pr.created_by = u.user_id
+            LEFT JOIN users a ON pr.approved_by = a.user_id
+            WHERE pr.request_id = ?
+        ");
+        $stmt->execute([$requestId]);
+        $request = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$request) {
+            error_log("NOTIFY PROCUREMENT: Request not found for ID $requestId");
+            return false;
+        }
+
+        // Get all Procurement Officers
+        $procurementUsers = getUsersByRole('Procurement Officer');
+        if (empty($procurementUsers)) {
+            error_log("NOTIFY PROCUREMENT: No Procurement Officers found in the system");
+            return false;
+        }
+
+        $appUrl = getAppUrl();
+        $currency = normalizeCurrency($request['currency'] ?? 'JMD');
+        $estimatedValue = $currency . ' ' . number_format($request['estimated_value'], 2);
+        $statusLabel = str_replace('_', ' ', ucwords(strtolower($approvalStatus)));
+        $subject = "Request Approved - Ready for Procurement: {$request['request_number']}";
+
+        $sent = false;
+        foreach ($procurementUsers as $po) {
+            if (empty($po['email'])) continue;
+
+            $html = <<<HTML
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+    body { font-family: Arial, sans-serif; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .header { background: linear-gradient(90deg, #0b5e2b, #c9a227); color: white; padding: 20px; }
+    .content { padding: 20px; }
+    .status-box { background: #198754; color: white; padding: 15px; border-radius: 5px; text-align: center; margin: 15px 0; font-size: 18px; font-weight: bold; }
+    .alert { background: #c8f5e0; border-left: 4px solid #198754; padding: 12px; margin: 15px 0; border-radius: 4px; color: #155724; }
+    .details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    .detail-row { margin: 8px 0; }
+    .label { font-weight: bold; color: #555; }
+    .button { background: #0b5e2b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 15px; }
+    .footer { background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #ddd; }
+</style></head><body>
+<div class="container">
+    <div class="header">
+        <h2 style="margin: 0;">✓ Request Approved - Ready for Procurement</h2>
+        <p style="margin: 5px 0 0 0;">Government Chemist - PRMS</p>
+    </div>
+    <div class="content">
+        <p>Dear {$po['full_name']},</p>
+        
+        <div class="alert">
+            <strong>✓ A procurement request has been approved by the branch head and is now ready for your processing.</strong>
+        </div>
+        
+        <div class="status-box">Approved - Ready for Procurement</div>
+        
+        <div class="details">
+            <div class="detail-row">
+                <span class="label">Request Number:</span> <strong>{$request['request_number']}</strong>
+            </div>
+            <div class="detail-row">
+                <span class="label">Approval Status:</span> {$statusLabel}
+            </div>
+            <div class="detail-row">
+                <span class="label">Request Type:</span> {$request['request_type']}
+            </div>
+            <div class="detail-row">
+                <span class="label">Requestor:</span> {$request['requestor_name']}
+            </div>
+            <div class="detail-row">
+                <span class="label">Branch:</span> {$request['branch_name']}
+            </div>
+            <div class="detail-row">
+                <span class="label">Estimated Value:</span> {$estimatedValue}
+            </div>
+            <div class="detail-row">
+                <span class="label">Approved By:</span> {$request['approver_name']}
+            </div>
+            <div class="detail-row">
+                <span class="label">Approval Date:</span> {$request['approved_at']}
+            </div>
+        </div>
+        
+        <p>Please review the request details and proceed with the procurement process (RFQ, quotes, vendor selection, etc.).</p>
+        
+        <p>
+            <a href="{$appUrl}/procurement/view.php?id={$requestId}" class="button">
+                Review & Process Request
+            </a>
+        </p>
+        
+        <p style="margin-top: 20px; font-size: 12px; color: #777;">
+            This is an automated notification from the Procurement Request Management System indicating that approval has been completed at the branch level.
+        </p>
+    </div>
+    <div class="footer">
+        <p>&copy; Government Chemist &middot; PRMS &middot; Confidential</p>
+    </div>
+</div></body></html>
+HTML;
+            if (sendMail($po['email'], $subject, $html)) {
+                $sent = true;
+            }
+        }
+        
+        if ($sent) {
+            error_log("NOTIFY PROCUREMENT: Successfully notified procurement officers of approval for request $requestId");
+        }
+        return $sent;
+
+    } catch (Exception $e) {
+        error_log("Notify procurement of approval error: {$e->getMessage()}");
+        return false;
+    }
+}
+
+/**
+ * Notify Procurement Officers when a branch head declines a request
+ * Procurement needs to know the request won't need processing
+ */
+function notifyProcurementOfDecline(int $requestId, string $declineReason): bool {
+    if (!notificationsEnabled()) return false;
+
+    global $pdo;
+    try {
+        // Get request details
+        $stmt = $pdo->prepare("
+            SELECT pr.request_number, pr.estimated_value, pr.currency, pr.request_type,
+                   pr.created_by, b.branch_name, u.full_name as requestor_name,
+                   a.full_name as approver_name, pr.approved_at
+            FROM procurement_requests pr
+            LEFT JOIN branches b ON pr.branch_id = b.branch_id
+            LEFT JOIN users u ON pr.created_by = u.user_id
+            LEFT JOIN users a ON pr.approved_by = a.user_id
+            WHERE pr.request_id = ?
+        ");
+        $stmt->execute([$requestId]);
+        $request = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$request) {
+            error_log("NOTIFY PROCUREMENT DECLINE: Request not found for ID $requestId");
+            return false;
+        }
+
+        // Get all Procurement Officers
+        $procurementUsers = getUsersByRole('Procurement Officer');
+        if (empty($procurementUsers)) {
+            error_log("NOTIFY PROCUREMENT DECLINE: No Procurement Officers found in the system");
+            return false;
+        }
+
+        $appUrl = getAppUrl();
+        $currency = normalizeCurrency($request['currency'] ?? 'JMD');
+        $estimatedValue = $currency . ' ' . number_format($request['estimated_value'], 2);
+        $subject = "Request Declined - Not Proceeding: {$request['request_number']}";
+
+        $sent = false;
+        foreach ($procurementUsers as $po) {
+            if (empty($po['email'])) continue;
+
+            $html = <<<HTML
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+    body { font-family: Arial, sans-serif; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .header { background: linear-gradient(90deg, #dc3545, #d32f2f); color: white; padding: 20px; }
+    .content { padding: 20px; }
+    .status-box { background: #dc3545; color: white; padding: 15px; border-radius: 5px; text-align: center; margin: 15px 0; font-size: 18px; font-weight: bold; }
+    .alert { background: #fdeef2; border-left: 4px solid #dc3545; padding: 12px; margin: 15px 0; border-radius: 4px; color: #721c24; }
+    .details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    .detail-row { margin: 8px 0; }
+    .label { font-weight: bold; color: #555; }
+    .button { background: #0b5e2b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 15px; }
+    .footer { background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #ddd; }
+</style></head><body>
+<div class="container">
+    <div class="header">
+        <h2 style="margin: 0;">✗ Request Declined - Not Proceeding</h2>
+        <p style="margin: 5px 0 0 0;">Government Chemist - PRMS</p>
+    </div>
+    <div class="content">
+        <p>Dear {$po['full_name']},</p>
+        
+        <div class="alert">
+            <strong>✗ A procurement request has been declined by the branch head. No further processing is needed.</strong>
+        </div>
+        
+        <div class="status-box">Declined - No Further Action</div>
+        
+        <div class="details">
+            <div class="detail-row">
+                <span class="label">Request Number:</span> <strong>{$request['request_number']}</strong>
+            </div>
+            <div class="detail-row">
+                <span class="label">Request Type:</span> {$request['request_type']}
+            </div>
+            <div class="detail-row">
+                <span class="label">Requestor:</span> {$request['requestor_name']}
+            </div>
+            <div class="detail-row">
+                <span class="label">Branch:</span> {$request['branch_name']}
+            </div>
+            <div class="detail-row">
+                <span class="label">Estimated Value:</span> {$estimatedValue}
+            </div>
+            <div class="detail-row">
+                <span class="label">Declined By:</span> {$request['approver_name']}
+            </div>
+            <div class="detail-row">
+                <span class="label">Decline Reason:</span>
+            </div>
+            <div style="margin-left: 15px; padding: 10px; background: white; border-left: 3px solid #dc3545; border-radius: 3px; margin-top: 8px;">
+                {$declineReason}
+            </div>
+        </div>
+        
+        <p>No further procurement action is required for this request. You may archive or note this for your records.</p>
+        
+        <p>
+            <a href="{$appUrl}/procurement/view.php?id={$requestId}" class="button">
+                View Request Details
+            </a>
+        </p>
+        
+        <p style="margin-top: 20px; font-size: 12px; color: #777;">
+            This is an automated notification from the Procurement Request Management System indicating that a request has been declined at the branch level.
+        </p>
+    </div>
+    <div class="footer">
+        <p>&copy; Government Chemist &middot; PRMS &middot; Confidential</p>
+    </div>
+</div></body></html>
+HTML;
+            if (sendMail($po['email'], $subject, $html)) {
+                $sent = true;
+            }
+        }
+        
+        if ($sent) {
+            error_log("NOTIFY PROCUREMENT: Successfully notified procurement officers of decline for request $requestId");
+        }
+        return $sent;
+
+    } catch (Exception $e) {
+        error_log("Notify procurement of decline error: {$e->getMessage()}");
+        return false;
+    }
+}
+
 ?>
