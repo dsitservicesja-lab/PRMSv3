@@ -261,11 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Notify Finance Officers to create commitment in GFMS and upload document
             require_once $_SERVER['DOCUMENT_ROOT']."/config/notifications.php";
-            if ($formDocPath) {
-                notifyFinanceCommitmentUploadNeeded($request_id, "");
-            } else {
-                notifyCommitmentAction($request_id, "", 'FORM_NOT_PROVIDED', 'Procurement did not upload commitment form. Ready to create commitment.');
-            }
+            notifyFinanceCommitmentUploadNeeded($request_id, "");
             
             pop(
                 $formDocPath ? "Commitment form uploaded successfully. Finance has been notified to create the commitment in GFMS." : "Ready for commitment creation. Finance will create the commitment in GFMS.",
