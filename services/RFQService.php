@@ -379,10 +379,6 @@ class RFQService
                             <td>Request Number:</td>
                             <td><strong>$requestNumber</strong></td>
                         </tr>
-                        <tr>
-                            <td>Estimated Value:</td>
-                            <td><strong>$currency $estimatedValue</strong></td>
-                        </tr>
                     </table>
                 </div>
             </div>
