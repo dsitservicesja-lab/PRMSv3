@@ -24,13 +24,13 @@ function allowedTransitions(): array {
         'DRAFT'                  => ['SUBMITTED'],
         'SUBMITTED'              => ['HOD_APPROVED', 'DIRECTOR_APPROVED', 'GC_APPROVED', 'AWARDED', 'PROCUREMENT_STAGE', 'RFQ_LETTER_AVAILABLE', 'DECLINED'],
         'HOD_APPROVED'           => ['DIRECTOR_APPROVED', 'FUNDS_VERIFIED', 'GC_APPROVED', 'AWARDED', 'PROCUREMENT_STAGE', 'RFQ_LETTER_AVAILABLE'],
-        'FUNDS_VERIFIED'         => ['DIRECTOR_APPROVED', 'PROCUREMENT_STAGE', 'AWARDED', 'RFQ_LETTER_AVAILABLE'],
+        'FUNDS_VERIFIED'         => ['DIRECTOR_APPROVED', 'PROCUREMENT_STAGE', 'AWARDED', 'RFQ_LETTER_AVAILABLE', 'COMMITMENTS_PENDING'],
         'DIRECTOR_APPROVED'      => ['GC_APPROVED', 'AWARDED', 'PROCUREMENT_STAGE', 'RFQ_LETTER_AVAILABLE'],
         'GC_APPROVED'            => ['AWARDED', 'PROCUREMENT_STAGE', 'RFQ_LETTER_AVAILABLE'],
         // RFQ Workflow Stages
         'RFQ_LETTER_AVAILABLE'   => ['QUOTE_REVIEW_PENDING', 'PROCUREMENT_STAGE'],
         'QUOTE_REVIEW_PENDING'   => ['QUOTE_APPROVED', 'PROCUREMENT_STAGE'],
-        'QUOTE_APPROVED'         => ['COMMITMENT_APPROVED', 'COMMITMENT_DECLINED', 'COMMITMENTS_PENDING', 'PROCUREMENT_STAGE'],
+        'QUOTE_APPROVED'         => ['COMMITMENT_APPROVED', 'COMMITMENT_DECLINED', 'COMMITMENTS_PENDING', 'FUNDS_VERIFIED', 'PROCUREMENT_STAGE'],
         'COMMITMENTS_PENDING'    => ['COMMITMENT_APPROVED', 'PROCUREMENT_STAGE'],
         'COMMITMENT_APPROVED'    => ['PO_PENDING', 'AWARDED'],
         'COMMITMENT_DECLINED'    => ['QUOTE_REVIEW_PENDING', 'PROCUREMENT_STAGE'], // Requestor can revise quote or return to review
@@ -40,7 +40,7 @@ function allowedTransitions(): array {
         'PROCUREMENT_STAGE'      => ['EVALUATION_STAGE', 'QUOTE_REVIEW_PENDING', 'AWARDED'],
         'EVALUATION_STAGE'       => ['COMMITTEE_RECOMMENDED', 'QUOTE_REVIEW_PENDING', 'AWARDED'],
         'COMMITTEE_RECOMMENDED'  => ['GC_APPROVED', 'QUOTE_REVIEW_PENDING', 'AWARDED'],
-        'AWARDED'                => ['COMMITMENT_APPROVED', 'COMMITMENT_DECLINED', 'COMMITMENTS_PENDING', 'PO_PENDING', 'COMPLETED'],
+        'AWARDED'                => ['COMMITMENT_APPROVED', 'COMMITMENT_DECLINED', 'COMMITMENTS_PENDING', 'FUNDS_VERIFIED', 'PO_PENDING', 'COMPLETED'],
     ];
 }
 
@@ -64,7 +64,7 @@ function stageOwner(string $stage): array {
         'QUOTE_REVIEW_PENDING'   => ['Requestor', 'HOD', 'Branch Head', 'Procurement Officer'], // For quote review & approval
         'PROCUREMENT_STAGE'      => ['Procurement Officer', 'HOD'], // HOD can approve and transition to this
         'QUOTE_APPROVED'         => ['Finance Officer'], // Finance reviews and approves/declines
-        'COMMITMENTS_PENDING'    => ['Finance Officer'], // Legacy - kept for backward compat
+        'COMMITMENTS_PENDING'    => ['Finance Officer'], // Finance uploads commitment after Procurement submits form
         'COMMITMENT_APPROVED'    => ['Finance Officer'], // Finance approval with funds verification
         'COMMITMENT_DECLINED'    => ['Finance Officer'], // Finance declined due to fund constraints
         'PO_PENDING'             => ['Procurement Officer', 'Accounts Officer'], // Creating PO from GFMS
@@ -655,7 +655,7 @@ function getRFQWorkflowStep(string $status, bool $rfqExists = false): array {
         'PROCUREMENT_STAGE' => ['number' => 3, 'name' => 'Procurement Stage', 'description' => 'RFQ process initiated'],
         'QUOTE_REVIEW_PENDING' => ['number' => 4, 'name' => 'Quotes Submitted', 'description' => 'Review vendor quotes'],
         'QUOTE_APPROVED' => ['number' => 5, 'name' => 'Quote Selected', 'description' => 'Quote meets requirements'],
-        'COMMITMENTS_PENDING' => ['number' => 6, 'name' => 'Creating Commitment', 'description' => 'Accounts generating from GFMS'],
+        'COMMITMENTS_PENDING' => ['number' => 6, 'name' => 'Commitment Form Submitted', 'description' => 'Procurement submitted commitment form, awaiting Finance upload'],
         'COMMITMENT_APPROVED' => ['number' => 7, 'name' => 'Commitment Approved', 'description' => 'Finance approved commitment'],
         'PO_PENDING' => ['number' => 8, 'name' => 'PO Created', 'description' => 'Purchase Order created, ready for invoice'],
         'INVOICE_RECEIVED' => ['number' => 9, 'name' => 'Invoice Received', 'description' => 'Vendor invoice uploaded'],
@@ -689,7 +689,8 @@ function getNextRFQStep(string $status, bool $isDirectProcurement = false): arra
         'FUNDS_VERIFIED' => 'RFQ_LETTER_AVAILABLE',
         'RFQ_LETTER_AVAILABLE' => 'QUOTE_REVIEW_PENDING',
         'QUOTE_REVIEW_PENDING' => 'QUOTE_APPROVED',
-        'QUOTE_APPROVED' => 'COMMITMENTS_PENDING',
+        'QUOTE_APPROVED' => 'FUNDS_VERIFIED',
+        'FUNDS_VERIFIED' => 'COMMITMENTS_PENDING',
         'COMMITMENTS_PENDING' => 'COMMITMENT_APPROVED',
         'COMMITMENT_APPROVED' => 'PO_PENDING',
         'PO_PENDING' => 'INVOICE_RECEIVED',
@@ -707,7 +708,8 @@ function getNextRFQStep(string $status, bool $isDirectProcurement = false): arra
         'RFQ_LETTER_AVAILABLE' => 'Generate RFQ letters and send to vendors',
         'QUOTE_REVIEW_PENDING' => 'Wait for vendor quotes, then review',
         'QUOTE_APPROVED' => 'Select quote that meets requirements',
-        'COMMITMENTS_PENDING' => 'Create commitment from GFMS',
+        'FUNDS_VERIFIED' => 'Finance verified funds, Procurement fills commitment form',
+        'COMMITMENTS_PENDING' => 'Finance uploads commitment document from GFMS',
         'COMMITMENT_APPROVED' => 'Get Finance approval for commitment',
         'PO_PENDING' => 'Generate PO from GFMS',
         'INVOICE_RECEIVED' => 'Upload vendor invoice',
@@ -778,7 +780,7 @@ function getStatusLabel(string $status): array {
         'RFQ_LETTER_AVAILABLE' => ['label' => 'RFQ Letter Available', 'description' => 'RFQ letter can be generated for vendors', 'color' => 'info'],
         'QUOTE_REVIEW_PENDING' => ['label' => 'Quote Review Pending', 'description' => 'Waiting for Requestor/HOD to review and select vendor quote', 'color' => 'warning'],
         'QUOTE_APPROVED' => ['label' => 'Quote Approved', 'description' => 'Quote selected by Requestor, awaiting Finance commitment review', 'color' => 'info'],
-        'COMMITMENTS_PENDING' => ['label' => 'Commitment Pending', 'description' => 'Waiting for commitment creation and Finance verification', 'color' => 'warning'],
+        'COMMITMENTS_PENDING' => ['label' => 'Commitment Pending', 'description' => 'Procurement submitted commitment form. Awaiting Finance to upload commitment document.', 'color' => 'warning'],
         'COMMITMENT_APPROVED' => ['label' => 'Commitment Approved', 'description' => 'Finance has verified funds and created commitment. Ready for PO creation.', 'color' => 'success'],
         'COMMITMENT_DECLINED' => ['label' => 'Commitment Declined', 'description' => 'Finance declined commitment due to insufficient funds or issues. Request returned to Requestor.', 'color' => 'danger'],
         'PO_PENDING' => ['label' => 'PO Created', 'description' => 'Purchase Order created, ready for invoice upload', 'color' => 'success'],

@@ -2359,4 +2359,156 @@ HTML;
     }
 }
 
+/**
+ * Notify Procurement Officers that funds have been verified and they need to fill the commitment form
+ */
+function notifyProcurementCommitmentFormNeeded(int $requestId): bool {
+    if (!notificationsEnabled()) return false;
+
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("
+            SELECT pr.request_number, pr.estimated_value, pr.currency,
+                   b.branch_name
+            FROM procurement_requests pr
+            LEFT JOIN branches b ON pr.branch_id = b.branch_id
+            WHERE pr.request_id = ?
+        ");
+        $stmt->execute([$requestId]);
+        $request = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$request) return false;
+
+        $procurementUsers = getUsersByRole('Procurement Officer');
+        if (empty($procurementUsers)) return false;
+
+        $appUrl = getAppUrl();
+        $currency = normalizeCurrency($request['currency'] ?? 'JMD');
+        $estimatedValue = $currency . ' ' . number_format($request['estimated_value'], 2);
+        $subject = "Funds Verified - {$request['request_number']} - Commitment Form Required";
+
+        foreach ($procurementUsers as $pu) {
+            if (empty($pu['email'])) continue;
+            $html = <<<HTML
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+    body { font-family: Arial, sans-serif; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .header { background: linear-gradient(90deg, #0b5e2b, #c9a227); color: white; padding: 20px; }
+    .content { padding: 20px; }
+    .status-box { background: #198754; color: white; padding: 15px; border-radius: 5px; text-align: center; margin: 15px 0; font-size: 18px; font-weight: bold; }
+    .details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    .detail-row { margin: 8px 0; }
+    .label { font-weight: bold; color: #555; }
+    .button { background: #0b5e2b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 15px; }
+    .footer { background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #ddd; }
+</style></head><body>
+<div class="container">
+    <div class="header">
+        <h2 style="margin: 0;">Funds Verified - Commitment Form Required</h2>
+        <p style="margin: 5px 0 0 0;">Government Chemist - PRMS</p>
+    </div>
+    <div class="content">
+        <p>Dear {$pu['full_name']},</p>
+        <div class="status-box">Funds Verified - Action Required</div>
+        <div class="details">
+            <div class="detail-row"><span class="label">Request Number:</span> {$request['request_number']}</div>
+            <div class="detail-row"><span class="label">Branch:</span> {$request['branch_name']}</div>
+            <div class="detail-row"><span class="label">Estimated Value:</span> {$estimatedValue}</div>
+        </div>
+        <p>Finance has verified that funds are available for this request. Please fill out the commitment form with the commitment date, amount, and GFMS commitment number, then submit to Finance for commitment document upload.</p>
+        <p><a href="{$appUrl}/commitments/add.php?request_id={$requestId}" class="button">Fill Commitment Form</a></p>
+        <p style="margin-top: 20px; font-size: 12px; color: #777;">This is an automated notification from PRMS.</p>
+    </div>
+    <div class="footer"><p>&copy; Government Chemist &middot; PRMS &middot; Confidential</p></div>
+</div></body></html>
+HTML;
+            sendMail($pu['email'], $subject, $html);
+        }
+
+        return true;
+    } catch (Exception $e) {
+        error_log("notifyProcurementCommitmentFormNeeded error: {$e->getMessage()}");
+        return false;
+    }
+}
+
+/**
+ * Notify Finance Officers that Procurement has submitted the commitment form and document upload is needed
+ */
+function notifyFinanceCommitmentUploadNeeded(int $requestId, string $commitmentNumber): bool {
+    if (!notificationsEnabled()) return false;
+
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("
+            SELECT pr.request_number, pr.estimated_value, pr.currency,
+                   b.branch_name,
+                   c.commitment_date, c.commitment_total, c.gfms_commitment_number
+            FROM procurement_requests pr
+            LEFT JOIN branches b ON pr.branch_id = b.branch_id
+            LEFT JOIN commitments c ON c.request_id = pr.request_id AND c.commitment_type = 'ORIGINAL'
+            WHERE pr.request_id = ?
+        ");
+        $stmt->execute([$requestId]);
+        $request = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$request) return false;
+
+        $financeUsers = getUsersByRole('Finance Officer');
+        if (empty($financeUsers)) return false;
+
+        $appUrl = getAppUrl();
+        $commitmentAmount = 'JMD ' . number_format((float)($request['commitment_total'] ?? 0), 2);
+        $gfmsNum = $request['gfms_commitment_number'] ? htmlspecialchars($request['gfms_commitment_number']) : 'Not provided';
+        $subject = "Commitment Form Submitted - {$request['request_number']} - Upload Required";
+
+        foreach ($financeUsers as $fu) {
+            if (empty($fu['email'])) continue;
+            $html = <<<HTML
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8">
+<style>
+    body { font-family: Arial, sans-serif; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; }
+    .header { background: linear-gradient(90deg, #0b5e2b, #c9a227); color: white; padding: 20px; }
+    .content { padding: 20px; }
+    .status-box { background: #fd7e14; color: white; padding: 15px; border-radius: 5px; text-align: center; margin: 15px 0; font-size: 18px; font-weight: bold; }
+    .details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    .detail-row { margin: 8px 0; }
+    .label { font-weight: bold; color: #555; }
+    .button { background: #0b5e2b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block; margin-top: 15px; }
+    .footer { background: #f8f9fa; padding: 15px; text-align: center; font-size: 12px; color: #777; border-top: 1px solid #ddd; }
+</style></head><body>
+<div class="container">
+    <div class="header">
+        <h2 style="margin: 0;">Commitment Form Submitted - Upload Required</h2>
+        <p style="margin: 5px 0 0 0;">Government Chemist - PRMS</p>
+    </div>
+    <div class="content">
+        <p>Dear {$fu['full_name']},</p>
+        <div class="status-box">Commitment Document Upload Required</div>
+        <div class="details">
+            <div class="detail-row"><span class="label">Request Number:</span> {$request['request_number']}</div>
+            <div class="detail-row"><span class="label">Commitment Number:</span> {$commitmentNumber}</div>
+            <div class="detail-row"><span class="label">Commitment Amount:</span> {$commitmentAmount}</div>
+            <div class="detail-row"><span class="label">GFMS Number:</span> {$gfmsNum}</div>
+            <div class="detail-row"><span class="label">Branch:</span> {$request['branch_name']}</div>
+        </div>
+        <p>Procurement has submitted the commitment form for this request. Please upload the commitment document from GFMS to finalize the commitment.</p>
+        <p><a href="{$appUrl}/commitments/add.php?request_id={$requestId}" class="button">Upload Commitment Document</a></p>
+        <p style="margin-top: 20px; font-size: 12px; color: #777;">This is an automated notification from PRMS.</p>
+    </div>
+    <div class="footer"><p>&copy; Government Chemist &middot; PRMS &middot; Confidential</p></div>
+</div></body></html>
+HTML;
+            sendMail($fu['email'], $subject, $html);
+        }
+
+        return true;
+    } catch (Exception $e) {
+        error_log("notifyFinanceCommitmentUploadNeeded error: {$e->getMessage()}");
+        return false;
+    }
+}
+
 ?>
