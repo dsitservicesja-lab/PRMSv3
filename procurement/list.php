@@ -95,6 +95,7 @@ $sql = "
         pr.request_id,
         pr.request_number,
         pr.request_date,
+        pr.request_type,
         pr.status AS request_status,
 
         c.commitment_id,
@@ -210,6 +211,36 @@ function reqLabel(string $status): string {
         'COMPLETED'             => 'Completed',
         'DECLINED'              => 'Declined',
         default                 => $status,
+    };
+}
+
+/* Request type badge helper */
+function getRequestTypeBadge(string $type): array {
+    return match (strtoupper($type)) {
+        'REGULAR' => [
+            'label' => 'Regular',
+            'bg' => '#e3f2fd',
+            'color' => '#1565c0',
+            'icon' => '📋'
+        ],
+        'REIMBURSEMENT' => [
+            'label' => 'Reimbursement',
+            'bg' => '#f3e5f5',
+            'color' => '#6a1b9a',
+            'icon' => '💰'
+        ],
+        'PETTY_CASH' => [
+            'label' => 'Petty Cash',
+            'bg' => '#e8f5e9',
+            'color' => '#2e7d32',
+            'icon' => '🏧'
+        ],
+        default => [
+            'label' => $type,
+            'bg' => '#f5f5f5',
+            'color' => '#666',
+            'icon' => '📄'
+        ]
     };
 }
 
@@ -447,6 +478,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . "/config/helper.php";
             <thead style="background-color: #f8f9fa; border-bottom: 2px solid #e0e0e0;">
                 <tr>
                     <th style="padding: 1rem; font-weight: 600; color: #1a1a1a; border: none;">Request #</th>
+                    <th style="padding: 1rem; font-weight: 600; color: #1a1a1a; border: none;">Type</th>
                     <th style="padding: 1rem; font-weight: 600; color: #1a1a1a; border: none;">Status</th>
                     <th style="padding: 1rem; font-weight: 600; color: #1a1a1a; border: none;">Commitment</th>
                     <th style="padding: 1rem; font-weight: 600; color: #1a1a1a; border: none;">PO #</th>
@@ -473,6 +505,14 @@ require_once $_SERVER['DOCUMENT_ROOT'] . "/config/helper.php";
                         <br>
                         <small style="color: #999;"><?= date('d M Y', strtotime($row['request_date'])) ?></small>
                     </div>
+                </td>
+                <td style="padding: 1rem; border: none; vertical-align: middle;">
+                    <?php
+                        $typeBadge = getRequestTypeBadge($row['request_type'] ?? 'REGULAR');
+                    ?>
+                    <span style="display: inline-block; background-color: <?= $typeBadge['bg'] ?>; color: <?= $typeBadge['color'] ?>; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem;">
+                        <?= $typeBadge['icon'] ?> <?= $typeBadge['label'] ?>
+                    </span>
                 </td>
                 <td style="padding: 1rem; border: none; vertical-align: middle;">
                     <span style="display: inline-block; background-color: #f0f0f0; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 600; font-size: 0.85rem; color: #1a1a1a;">
