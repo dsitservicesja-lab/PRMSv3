@@ -34,6 +34,7 @@ class RFQService
                     r.rfq_number,
                     r.submission_deadline,
                     r.status,
+                    r.request_id,
                     pr.request_number,
                     pr.description,
                     pr.estimated_value,
@@ -432,10 +433,10 @@ class RFQService
             <div class="section">
                 <div class="section-title">[NEED ASSISTANCE?]</div>
                 <div class="section-content">
-                    If you have any questions about this RFQ, please contact the Procurement Department at:
+                    If you have any questions about this RFQ, please contact the Director for Procurement at:
                     <br><br>
-                    <strong>Email:</strong> procurement@governmentchemist.com<br>
-                    <strong>Phone:</strong> +1-876-754-6088
+                    <strong>Email:</strong> Gabrielle.Green@moh.gov.jm<br>
+                    <strong>Phone:</strong> +1-876-977-4066
                 </div>
             </div>
         </div>
