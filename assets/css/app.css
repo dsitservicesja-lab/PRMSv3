@@ -152,6 +152,10 @@
   opacity: .9;
 }
 
+/* ================================
+   Sidebar – Modern Design
+================================ */
+
 /* Sidebar: sticky, full height */
 .sidebar {
   position: sticky;
@@ -160,6 +164,98 @@
   overflow-y: auto;
   z-index: 1020;
   flex-shrink: 0;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%) !important;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 4px;
+}
+
+.sidebar-inner {
+  min-height: 100%;
+}
+
+/* Brand */
+.sidebar-brand {
+  padding: 0.75rem 1rem;
+}
+.tracking-wide {
+  letter-spacing: 0.5px;
+}
+
+/* User profile block */
+.sidebar-user {
+  padding: 0 0.5rem;
+}
+.sidebar-avatar {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Section labels */
+.sidebar-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(255,255,255,0.4);
+  padding: 0.5rem 0.75rem 0.25rem;
+  text-transform: uppercase;
+  margin-top: 0.25rem;
+}
+
+/* Sub-section labels (e.g. under Reports) */
+.sidebar-subsection {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.3);
+  padding: 0.35rem 0.75rem 0.1rem 2.25rem;
+  text-transform: uppercase;
+  margin-top: 0.1rem;
+}
+
+/* Nav links */
+.sidebar-link {
+  border-radius: 7px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.1s ease;
+  display: flex;
+  align-items: center;
+  margin-bottom: 1px;
+  color: rgba(255,255,255,0.82) !important;
+}
+
+.sidebar-link:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff !important;
+  transform: translateX(2px);
+}
+
+/* Active state */
+.sidebar-active {
+  background: rgba(255,255,255,0.14) !important;
+  color: #fff !important;
+  box-shadow: inset 3px 0 0 rgba(201,162,39,0.8);
+}
+
+/* Logout link */
+.sidebar-logout {
+  color: rgba(255, 100, 100, 0.85) !important;
+}
+.sidebar-logout:hover {
+  background: rgba(220, 53, 69, 0.18) !important;
+  color: #ff6b6b !important;
 }
 
 /* Prevent sidebar from covering main content */
@@ -181,5 +277,47 @@ body {
 main {
   flex: 1 0 auto;
   min-height: 0;
+}
+
+/* ================================
+   Top-bar breadcrumb area
+================================ */
+.page-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+  margin-bottom: 1.5rem;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+/* ================================
+   Cards & UI components
+================================ */
+.stat-card {
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+/* ================================
+   Tables
+================================ */
+.table-clean thead th {
+  background: #f8f9fa;
+  border-bottom: 2px solid #e0e0e0;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
