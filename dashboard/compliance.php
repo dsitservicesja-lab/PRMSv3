@@ -173,5 +173,3 @@ $records = $dataQuery->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <?php require_once $_SERVER['DOCUMENT_ROOT'].'/includes/footer.php'; ?>
-
-<?php require_once $_SERVER['DOCUMENT_ROOT'].'/includes/footer.php'; ?>

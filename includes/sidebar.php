@@ -6,7 +6,7 @@ $isActing = isActingRole();
 $actingRoles = isset($pdo) ? getActingRoles($pdo, $_SESSION['user_id'] ?? 0) : [];
 
 function active($url, $currentPage) {
-    return strpos($currentPage, $url) !== false ? 'active bg-secondary rounded' : '';
+    return strpos($currentPage, $url) !== false ? 'sidebar-active' : '';
 }
 
 function isCollapsibleActive($urls, $currentPage) {
@@ -17,51 +17,53 @@ function isCollapsibleActive($urls, $currentPage) {
 }
 ?>
 
-<div class="pt-3 text-white">
+<div class="sidebar-inner pt-2 text-white">
 
     <!-- BRAND -->
-    <div class="text-center mb-3 border-bottom pb-3">
+    <div class="sidebar-brand text-center mb-2 pb-3 border-bottom border-secondary">
         <a href="/dashboard/index.php" class="text-decoration-none text-white d-flex align-items-center justify-content-center gap-2">
-            <img src="/logo/cropped-Logo.png" alt="Logo" style="height:32px; filter: brightness(0) invert(1);">
-            <span class="fw-semibold fs-5">DGC PRMS</span>
+            <img src="/logo/cropped-Logo.png" alt="Logo" style="height:30px; filter: brightness(0) invert(1);">
+            <span class="fw-bold fs-5 tracking-wide">DGC PRMS</span>
         </a>
     </div>
 
     <!-- USER PROFILE SECTION -->
-    <div class="text-center mb-4 border-bottom pb-3">
-        <div class="fw-bold"><?= htmlspecialchars($userName) ?></div>
+    <div class="sidebar-user text-center mb-3 pb-3 border-bottom border-secondary px-3">
+        <div class="sidebar-avatar mx-auto mb-2">
+            <i class="bi bi-person-circle" style="font-size: 2.2rem; color: rgba(255,255,255,0.7);"></i>
+        </div>
+        <div class="fw-semibold small text-truncate"><?= htmlspecialchars($userName) ?></div>
         <?php if ($isActing): ?>
-            <span class="badge bg-warning text-dark fs-7">
-                ⚡ Acting: <?= htmlspecialchars($roleName) ?>
+            <span class="badge bg-warning text-dark mt-1" style="font-size: 0.7rem;">
+                <i class="bi bi-lightning-fill me-1"></i>Acting: <?= htmlspecialchars($roleName) ?>
             </span>
             <br>
-            <small class="text-muted" style="font-size: 0.7rem;">
+            <small class="text-white-50" style="font-size: 0.68rem;">
                 Primary: <?= htmlspecialchars(getPrimaryRoleName()) ?>
             </small>
         <?php else: ?>
-            <span class="badge bg-info text-white fs-7">
+            <span class="badge mt-1" style="background: rgba(255,255,255,0.15); font-size: 0.7rem;">
                 <?= htmlspecialchars($roleName) ?>
             </span>
         <?php endif; ?>
 
         <?php if ($isActing || !empty($actingRoles)): ?>
-        <!-- Role Switcher -->
-        <div class="mt-2">
+        <div class="mt-2 d-flex flex-column gap-1">
             <?php if ($isActing): ?>
-                <form method="POST" action="/auth/switch_role.php" class="d-inline">
+                <form method="POST" action="/auth/switch_role.php">
                     <input type="hidden" name="action" value="revert">
-                    <button type="submit" class="btn btn-outline-light btn-sm w-100" style="font-size: 0.75rem;">
-                        🔄 Revert to <?= htmlspecialchars(getPrimaryRoleName()) ?>
+                    <button type="submit" class="btn btn-outline-light btn-sm w-100" style="font-size: 0.72rem;">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i>Revert to <?= htmlspecialchars(getPrimaryRoleName()) ?>
                     </button>
                 </form>
             <?php endif; ?>
             <?php foreach ($actingRoles as $ar): ?>
                 <?php if ($ar['acting_role_id'] != ($_SESSION['role_id'] ?? 0)): ?>
-                <form method="POST" action="/auth/switch_role.php" class="d-inline mt-1">
+                <form method="POST" action="/auth/switch_role.php">
                     <input type="hidden" name="action" value="switch">
                     <input type="hidden" name="acting_role_id" value="<?= $ar['acting_role_id'] ?>">
-                    <button type="submit" class="btn btn-outline-warning btn-sm w-100" style="font-size: 0.75rem;" title="<?= htmlspecialchars($ar['reason'] ?? '') ?>">
-                        ⚡ Act as <?= htmlspecialchars($ar['role_name']) ?>
+                    <button type="submit" class="btn btn-outline-warning btn-sm w-100" style="font-size: 0.72rem;" title="<?= htmlspecialchars($ar['reason'] ?? '') ?>">
+                        <i class="bi bi-lightning me-1"></i>Act as <?= htmlspecialchars($ar['role_name']) ?>
                     </button>
                 </form>
                 <?php endif; ?>
@@ -70,20 +72,20 @@ function isCollapsibleActive($urls, $currentPage) {
         <?php endif; ?>
     </div>
 
-    <ul class="nav flex-column">
+    <ul class="nav flex-column px-2">
 
         <!-- ===== REQUESTOR DASHBOARD ===== -->
         <?php if ($roleName === 'Requestor'): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">REQUESTOR</div>
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">REQUESTOR</div>
             <?php if (has_permission('submit_own_request')): ?>
-            <a class="nav-link text-white <?= active('/procurement/add', $currentPage) ?>" href="/procurement/add.php">
-                ➕ New Procurement Request
+            <a class="nav-link text-white sidebar-link <?= active('/procurement/add', $currentPage) ?>" href="/procurement/add.php">
+                <i class="bi bi-plus-circle me-2"></i>New Request
             </a>
             <?php endif; ?>
             <?php if (has_permission('view_own_requests')): ?>
-            <a class="nav-link text-white <?= active('/procurement/my_requests', $currentPage) ?>" href="/procurement/my_requests.php">
-                📋 My Requests
+            <a class="nav-link text-white sidebar-link <?= active('/procurement/my_requests', $currentPage) ?>" href="/procurement/my_requests.php">
+                <i class="bi bi-clipboard-check me-2"></i>My Requests
             </a>
             <?php endif; ?>
         </li>
@@ -92,91 +94,90 @@ function isCollapsibleActive($urls, $currentPage) {
 
         <!-- ===== HOD DASHBOARD ===== -->
         <?php if ($roleName === 'HOD'): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">HOD</div>
-            <a class="nav-link text-white <?= active('/dashboard/hod', $currentPage) ?>" href="/dashboard/hod.php">
-                🏢 HOD Dashboard
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">HOD</div>
+            <a class="nav-link text-white sidebar-link <?= active('/dashboard/hod', $currentPage) ?>" href="/dashboard/hod.php">
+                <i class="bi bi-speedometer2 me-2"></i>HOD Dashboard
             </a>
-            <a class="nav-link text-white <?= active('/procurement', $currentPage) ?>" href="/procurement/list.php">
-                📋 All Requests
+            <a class="nav-link text-white sidebar-link <?= active('/procurement', $currentPage) ?>" href="/procurement/list.php">
+                <i class="bi bi-clipboard-check me-2"></i>All Requests
             </a>
-            <a class="nav-link text-white <?= active('/commitments', $currentPage) ?>" href="/commitments/list.php">
-                📄 Commitments
+            <a class="nav-link text-white sidebar-link <?= active('/commitments', $currentPage) ?>" href="/commitments/list.php">
+                <i class="bi bi-folder2 me-2"></i>Commitments
             </a>
-            <a class="nav-link text-white <?= active('/po', $currentPage) ?>" href="/po/list.php">
-                🧾 Purchase Orders
+            <a class="nav-link text-white sidebar-link <?= active('/po', $currentPage) ?>" href="/po/list.php">
+                <i class="bi bi-receipt me-2"></i>Purchase Orders
             </a>
         </li>
         <?php endif; ?>
 
         <!-- ===== DIRECTOR PROCUREMENT DASHBOARD ===== -->
         <?php if ($roleName === 'Director Procurement'): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">DIRECTOR PROCUREMENT</div>
-            <a class="nav-link text-white <?= active('/dashboard/director_procurement', $currentPage) ?>" href="/dashboard/director_procurement.php">
-                🏢 Director Procurement Dashboard
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">DIRECTOR PROCUREMENT</div>
+            <a class="nav-link text-white sidebar-link <?= active('/dashboard/director_procurement', $currentPage) ?>" href="/dashboard/director_procurement.php">
+                <i class="bi bi-speedometer2 me-2"></i>Director Dashboard
             </a>
-            <a class="nav-link text-white <?= active('/procurement', $currentPage) ?>" href="/procurement/list.php">
-                📋 All Requests
+            <a class="nav-link text-white sidebar-link <?= active('/procurement', $currentPage) ?>" href="/procurement/list.php">
+                <i class="bi bi-clipboard-check me-2"></i>All Requests
             </a>
-            <a class="nav-link text-white <?= active('/commitments', $currentPage) ?>" href="/commitments/list.php">
-                📄 Commitments
+            <a class="nav-link text-white sidebar-link <?= active('/commitments', $currentPage) ?>" href="/commitments/list.php">
+                <i class="bi bi-folder2 me-2"></i>Commitments
             </a>
-            <a class="nav-link text-white <?= active('/po', $currentPage) ?>" href="/po/list.php">
-                🧾 Purchase Orders
+            <a class="nav-link text-white sidebar-link <?= active('/po', $currentPage) ?>" href="/po/list.php">
+                <i class="bi bi-receipt me-2"></i>Purchase Orders
             </a>
         </li>
         <?php endif; ?>
 
         <!-- ===== CORE SECTION ===== -->
-        <li class="nav-item">
-            <a class="nav-link text-white <?= active('/dashboard', $currentPage) ?>"
+        <li class="nav-item mt-2">
+            <a class="nav-link text-white sidebar-link <?= active('/dashboard', $currentPage) ?>"
                href="/dashboard/index.php">
-                🏠 Dashboard
+                <i class="bi bi-house me-2"></i>Dashboard
             </a>
         </li>
 
         <!-- ===== PROCUREMENT WORKFLOW ===== -->
         <?php if (has_permission('view_requests')): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">PROCUREMENT</div>
-            <a class="nav-link text-white <?= active('/procurement', $currentPage) ?>"
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">PROCUREMENT</div>
+            <a class="nav-link text-white sidebar-link <?= active('/procurement', $currentPage) ?>"
                href="/procurement/list.php">
-                📄 Procurement Requests
+                <i class="bi bi-file-earmark-text me-2"></i>Requests
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link text-white <?= active('/rfq', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/rfq', $currentPage) ?>"
                href="/rfq/list.php">
-                📝 RFQ / Evaluation
+                <i class="bi bi-clipboard-data me-2"></i>RFQ / Evaluation
             </a>
         </li>
         <?php endif; ?>
 
         <!-- ===== REIMBURSEMENT & PETTY CASH ===== -->
         <?php if (has_permission('submit_own_request') || has_permission('view_requests') || has_permission('approve_reimbursement') || has_permission('approve_petty_cash')): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">SPECIAL REQUESTS</div>
-            
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">SPECIAL REQUESTS</div>
+
             <?php if (has_permission('submit_own_request')): ?>
-            <a class="nav-link text-white <?= active('/reimbursement', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reimbursement/add', $currentPage) ?>"
                href="/reimbursement/add.php">
-                💵 Submit Reimbursement Request
+                <i class="bi bi-cash-coin me-2"></i>Submit Reimbursement
             </a>
 
-            <a class="nav-link text-white <?= active('/petty_cash', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/petty_cash/add', $currentPage) ?>"
                href="/petty_cash/add.php">
-                🏧 Submit Petty Cash Request
+                <i class="bi bi-piggy-bank me-2"></i>Submit Petty Cash
             </a>
             <?php endif; ?>
 
             <?php if (has_permission('view_requests') || has_permission('approve_reimbursement')): ?>
-            <a class="nav-link text-white <?= active('/reimbursement/list', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reimbursement/list', $currentPage) ?>"
                href="/reimbursement/list.php">
-                💵 Reimbursement Requests
+                <i class="bi bi-cash-stack me-2"></i>Reimbursements
                 <?php
-                // Show count of requests pending Finance approval
                 $reimbPending = $pdo->query("
                     SELECT COUNT(*)
                     FROM procurement_requests
@@ -185,17 +186,16 @@ function isCollapsibleActive($urls, $currentPage) {
                 ")->fetchColumn();
                 if ($reimbPending > 0):
                 ?>
-                    <span class="badge bg-warning ms-2"><?= $reimbPending ?></span>
+                    <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;"><?= $reimbPending ?></span>
                 <?php endif; ?>
             </a>
             <?php endif; ?>
 
             <?php if (has_permission('view_requests') || has_permission('approve_petty_cash')): ?>
-            <a class="nav-link text-white <?= active('/petty_cash/list', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/petty_cash/list', $currentPage) ?>"
                href="/petty_cash/list.php">
-                🏧 Petty Cash Requests
+                <i class="bi bi-wallet2 me-2"></i>Petty Cash
                 <?php
-                // Show count of requests pending Finance approval
                 $pettyCashPending = $pdo->query("
                     SELECT COUNT(*)
                     FROM procurement_requests
@@ -204,7 +204,7 @@ function isCollapsibleActive($urls, $currentPage) {
                 ")->fetchColumn();
                 if ($pettyCashPending > 0):
                 ?>
-                    <span class="badge bg-danger ms-2"><?= $pettyCashPending ?></span>
+                    <span class="badge bg-danger ms-1" style="font-size:0.65rem;"><?= $pettyCashPending ?></span>
                 <?php endif; ?>
             </a>
             <?php endif; ?>
@@ -213,9 +213,9 @@ function isCollapsibleActive($urls, $currentPage) {
 
         <?php if (has_permission('view_commitments')): ?>
         <li class="nav-item">
-            <a class="nav-link text-white <?= active('/commitments', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/commitments', $currentPage) ?>"
                href="/commitments/list.php">
-                📑 Commitments
+                <i class="bi bi-folder2-open me-2"></i>Commitments
                 <?php
                 $pending = $pdo->query("
                     SELECT COUNT(*)
@@ -225,7 +225,7 @@ function isCollapsibleActive($urls, $currentPage) {
                 ")->fetchColumn();
                 if ($pending > 0):
                 ?>
-                    <span class="badge bg-danger ms-2"><?= $pending ?></span>
+                    <span class="badge bg-danger ms-1" style="font-size:0.65rem;"><?= $pending ?></span>
                 <?php endif; ?>
             </a>
         </li>
@@ -233,32 +233,32 @@ function isCollapsibleActive($urls, $currentPage) {
 
         <!-- ===== FINANCIAL SECTION ===== -->
         <?php if (has_permission('view_purchase_orders') || has_permission('view_invoices') || has_permission('view_po_adjustments')): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">FINANCIAL</div>
-            
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">FINANCIAL</div>
+
             <?php if (has_permission('view_purchase_orders')): ?>
-            <a class="nav-link text-white <?= active('/po', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/po', $currentPage) ?>"
                href="/po/list.php">
-                🧾 Purchase Orders
+                <i class="bi bi-receipt me-2"></i>Purchase Orders
             </a>
             <?php endif; ?>
 
             <?php if (has_permission('view_invoices')): ?>
-            <a class="nav-link text-white <?= active('/invoice', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/invoice', $currentPage) ?>"
                href="/invoice/list.php">
-                📋 Invoices
+                <i class="bi bi-file-earmark-ruled me-2"></i>Invoices
             </a>
 
-            <a class="nav-link text-white <?= active('/payment', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/payment', $currentPage) ?>"
                href="/payment/list.php">
-                💳 Payments
+                <i class="bi bi-credit-card me-2"></i>Payments
             </a>
             <?php endif; ?>
 
             <?php if (has_permission('view_po_adjustments')): ?>
-            <a class="nav-link text-white <?= active('/po/variation', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/po/variation', $currentPage) ?>"
                href="/po/variation_queue.php">
-                ⚙️ PO Variations
+                <i class="bi bi-sliders me-2"></i>PO Variations
             </a>
             <?php endif; ?>
         </li>
@@ -266,67 +266,63 @@ function isCollapsibleActive($urls, $currentPage) {
 
         <!-- ===== REPORTS SECTION ===== -->
         <?php if (has_permission('view_financial_reports') || has_permission('view_management_dashboard')): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">REPORTS</div>
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">REPORTS</div>
 
             <?php if (has_permission('view_financial_reports')): ?>
-            <!-- Procurement Reports -->
-            <div class="text-muted small px-3 mb-2 mt-2" style="font-size: 0.8rem;">Procurement</div>
-            <a class="nav-link text-white <?= active('/reports/procurement_by_status', $currentPage) ?>"
+            <div class="sidebar-subsection">Procurement</div>
+            <a class="nav-link text-white sidebar-link <?= active('/reports/procurement_by_status', $currentPage) ?>"
                href="/reports/procurement_by_status.php">
-                📊 By Status
+                <i class="bi bi-bar-chart me-2"></i>By Status
             </a>
-            <a class="nav-link text-white <?= active('/reports/procurement_by_type', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reports/procurement_by_type', $currentPage) ?>"
                href="/reports/procurement_by_type.php">
-                📋 By Type
+                <i class="bi bi-pie-chart me-2"></i>By Type
             </a>
-            <a class="nav-link text-white <?= active('/reports/procurement_by_branch', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reports/procurement_by_branch', $currentPage) ?>"
                href="/reports/procurement_by_branch.php">
-                🏢 By Branch
+                <i class="bi bi-building me-2"></i>By Branch
             </a>
-            <a class="nav-link text-white <?= active('/reports/procurement_by_supplier', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reports/procurement_by_supplier', $currentPage) ?>"
                href="/reports/procurement_by_supplier.php">
-                🤝 By Supplier
+                <i class="bi bi-shop me-2"></i>By Supplier
             </a>
 
-            <!-- PO & Financial Reports -->
-            <div class="text-muted small px-3 mb-2 mt-2" style="font-size: 0.8rem;">Purchase Orders</div>
-            <a class="nav-link text-white <?= active('/reports/po_status', $currentPage) ?>"
+            <div class="sidebar-subsection">Purchase Orders</div>
+            <a class="nav-link text-white sidebar-link <?= active('/reports/po_status', $currentPage) ?>"
                href="/reports/po_status_report.php">
-                📦 PO Status
+                <i class="bi bi-boxes me-2"></i>PO Status
             </a>
 
-            <!-- Period & Payment Reports -->
-            <div class="text-muted small px-3 mb-2 mt-2" style="font-size: 0.8rem;">Financial</div>
-            <a class="nav-link text-white <?= active('/reports/period_reports', $currentPage) ?>"
+            <div class="sidebar-subsection">Financial</div>
+            <a class="nav-link text-white sidebar-link <?= active('/reports/period_reports', $currentPage) ?>"
                href="/reports/period_reports.php">
-                📅 Period Reports
+                <i class="bi bi-calendar-range me-2"></i>Period Reports
             </a>
-            <a class="nav-link text-white <?= active('/reports/amounts_paid', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reports/amounts_paid', $currentPage) ?>"
                href="/reports/amounts_paid_report.php">
-                💳 Amounts Paid
+                <i class="bi bi-cash me-2"></i>Amounts Paid
             </a>
-            <a class="nav-link text-white <?= active('/reports/outstanding', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reports/outstanding', $currentPage) ?>"
                href="/reports/outstanding_commitments_po.php">
-                ⏳ Outstanding
+                <i class="bi bi-hourglass-split me-2"></i>Outstanding
             </a>
 
-            <!-- Legacy Reports -->
-            <div class="text-muted small px-3 mb-2 mt-2" style="font-size: 0.8rem;">Branch</div>
-            <a class="nav-link text-white <?= active('/reports/branch_summary', $currentPage) ?>"
+            <div class="sidebar-subsection">Branch</div>
+            <a class="nav-link text-white sidebar-link <?= active('/reports/branch_summary', $currentPage) ?>"
                href="/reports/branch_summary.php">
-                📊 Summary
+                <i class="bi bi-graph-up me-2"></i>Summary
             </a>
-            <a class="nav-link text-white <?= active('/reports/branch_outstanding', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reports/branch_outstanding', $currentPage) ?>"
                href="/reports/branch_outstanding.php">
-                💰 Outstanding Balances
+                <i class="bi bi-currency-dollar me-2"></i>Outstanding Balances
             </a>
             <?php endif; ?>
 
             <?php if (has_permission('view_management_dashboard')): ?>
-            <a class="nav-link text-white <?= active('/reports/export', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/reports/export', $currentPage) ?>"
                href="/reports/export_pdf.php">
-                📄 Export Reports
+                <i class="bi bi-file-earmark-arrow-down me-2"></i>Export Reports
             </a>
             <?php endif; ?>
         </li>
@@ -334,94 +330,94 @@ function isCollapsibleActive($urls, $currentPage) {
 
         <!-- ===== INVENTORY MANAGEMENT ===== -->
         <?php if (has_permission('view_inventory')): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">INVENTORY</div>
-            <a class="nav-link text-white <?= active('/inventory/dashboard', $currentPage) ?>"
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">INVENTORY</div>
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/dashboard', $currentPage) ?>"
                href="/inventory/dashboard.php">
-                📊 Inventory Dashboard
+                <i class="bi bi-speedometer me-2"></i>Inventory Dashboard
             </a>
-            <a class="nav-link text-white <?= active('/inventory/items', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/items', $currentPage) ?>"
                href="/inventory/items/list.php">
-                📦 Items
+                <i class="bi bi-boxes me-2"></i>Items
             </a>
-            <a class="nav-link text-white <?= active('/inventory/locations', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/locations', $currentPage) ?>"
                href="/inventory/locations/list.php">
-                📍 Locations
+                <i class="bi bi-geo-alt me-2"></i>Locations
             </a>
-            <a class="nav-link text-white <?= active('/inventory/requisitions', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/requisitions', $currentPage) ?>"
                href="/inventory/requisitions/list.php">
-                📋 Requisitions
+                <i class="bi bi-list-check me-2"></i>Requisitions
             </a>
             <?php if (has_permission('receive_goods')): ?>
-            <a class="nav-link text-white <?= active('/inventory/receiving', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/receiving', $currentPage) ?>"
                href="/inventory/receiving/list.php">
-                📥 Receiving (GRN)
+                <i class="bi bi-inbox-fill me-2"></i>Receiving (GRN)
             </a>
             <?php endif; ?>
             <?php if (has_permission('issue_stock')): ?>
-            <a class="nav-link text-white <?= active('/inventory/issuing', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/issuing', $currentPage) ?>"
                href="/inventory/issuing/list.php">
-                📤 Stock Issues
+                <i class="bi bi-box-arrow-up me-2"></i>Stock Issues
             </a>
             <?php endif; ?>
             <?php if (has_permission('transfer_stock')): ?>
-            <a class="nav-link text-white <?= active('/inventory/transfers', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/transfers', $currentPage) ?>"
                href="/inventory/transfers/list.php">
-                🔄 Transfers
+                <i class="bi bi-arrow-left-right me-2"></i>Transfers
             </a>
             <?php endif; ?>
             <?php if (has_permission('adjust_stock')): ?>
-            <a class="nav-link text-white <?= active('/inventory/adjustments', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/adjustments', $currentPage) ?>"
                href="/inventory/adjustments/list.php">
-                ⚖️ Adjustments
+                <i class="bi bi-sliders2 me-2"></i>Adjustments
             </a>
             <?php endif; ?>
             <?php if (has_permission('dispose_stock')): ?>
-            <a class="nav-link text-white <?= active('/inventory/disposal', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/disposal', $currentPage) ?>"
                href="/inventory/disposal/list.php">
-                🗑️ Disposal
+                <i class="bi bi-trash3 me-2"></i>Disposal
             </a>
             <?php endif; ?>
             <?php if (has_permission('conduct_stock_count')): ?>
-            <a class="nav-link text-white <?= active('/inventory/stocktake', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/stocktake', $currentPage) ?>"
                href="/inventory/stocktake/list.php">
-                📝 Stock Counts
+                <i class="bi bi-clipboard-data me-2"></i>Stock Counts
             </a>
             <?php endif; ?>
             <?php if (has_permission('manage_quarantine')): ?>
-            <a class="nav-link text-white <?= active('/inventory/quarantine', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/quarantine', $currentPage) ?>"
                href="/inventory/quarantine/list.php">
-                🛡️ Quarantine
+                <i class="bi bi-shield-lock me-2"></i>Quarantine
             </a>
             <?php endif; ?>
             <?php if (has_permission('manage_recalls')): ?>
-            <a class="nav-link text-white <?= active('/inventory/recall', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/recall', $currentPage) ?>"
                href="/inventory/recall/list.php">
-                🔔 Recalls
+                <i class="bi bi-bell me-2"></i>Recalls
             </a>
             <?php endif; ?>
             <?php if (has_permission('manage_returns')): ?>
-            <a class="nav-link text-white <?= active('/inventory/returns', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/returns', $currentPage) ?>"
                href="/inventory/returns/list.php">
-                ↩️ Returns to Supplier
+                <i class="bi bi-arrow-return-left me-2"></i>Returns to Supplier
             </a>
             <?php endif; ?>
             <?php if (has_permission('manage_incidents')): ?>
-            <a class="nav-link text-white <?= active('/inventory/incidents', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/incidents', $currentPage) ?>"
                href="/inventory/incidents/list.php">
-                ⚠️ Incidents / Losses
+                <i class="bi bi-exclamation-triangle me-2"></i>Incidents / Losses
             </a>
             <?php endif; ?>
             <?php if (has_permission('manage_write_downs')): ?>
-            <a class="nav-link text-white <?= active('/inventory/writedowns', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/writedowns', $currentPage) ?>"
                href="/inventory/writedowns/list.php">
-                📉 Write-Downs (NRV)
+                <i class="bi bi-graph-down-arrow me-2"></i>Write-Downs (NRV)
             </a>
             <?php endif; ?>
             <?php if (has_permission('view_inventory_reports')): ?>
-            <a class="nav-link text-white <?= active('/inventory/reports', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/inventory/reports', $currentPage) ?>"
                href="/inventory/reports/">
-                📈 Inventory Reports
+                <i class="bi bi-bar-chart-line me-2"></i>Inventory Reports
             </a>
             <?php endif; ?>
         </li>
@@ -429,46 +425,46 @@ function isCollapsibleActive($urls, $currentPage) {
 
         <!-- ===== ADMINISTRATION SECTION ===== -->
         <?php if (has_permission('manage_users') || has_permission('view_audit_logs')): ?>
-        <li class="nav-item mt-3">
-            <div class="text-muted small fw-bold px-3 mb-2">ADMIN</div>
-            
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">ADMIN</div>
+
             <?php if (has_permission('manage_users')): ?>
-            <a class="nav-link text-white <?= active('/users', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/users', $currentPage) ?>"
                href="/users/list.php">
-                👥 Users
+                <i class="bi bi-people me-2"></i>Users
             </a>
-            <a class="nav-link text-white <?= active('/acting_roles', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/acting_roles', $currentPage) ?>"
                href="/users/acting_roles.php">
-                ⚡ Acting Roles
+                <i class="bi bi-lightning me-2"></i>Acting Roles
             </a>
             <?php endif; ?>
 
             <?php if (has_permission('view_vendors') || has_permission('manage_vendors')): ?>
-            <a class="nav-link text-white <?= active('/vendors', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/vendors', $currentPage) ?>"
                href="/vendors/list.php">
-                🏢 Vendors
+                <i class="bi bi-building me-2"></i>Vendors
             </a>
             <?php endif; ?>
 
             <?php if (has_permission('view_audit_logs')): ?>
-            <a class="nav-link text-white <?= active('/audit', $currentPage) ?>"
+            <a class="nav-link text-white sidebar-link <?= active('/audit', $currentPage) ?>"
                href="/audit/list.php">
-                📜 Audit Logs
+                <i class="bi bi-journal-check me-2"></i>Audit Logs
             </a>
             <?php endif; ?>
         </li>
         <?php endif; ?>
 
         <!-- ===== ACCOUNT SECTION ===== -->
-        <li class="nav-item mt-4 border-top pt-3">
-            <a class="nav-link text-white <?= active('/change_password', $currentPage) ?>"
+        <li class="nav-item mt-3 border-top border-secondary pt-3">
+            <a class="nav-link text-white sidebar-link <?= active('/change_password', $currentPage) ?>"
                href="/auth/change_password.php">
-                🔑 Change Password
+                <i class="bi bi-key me-2"></i>Change Password
             </a>
 
-            <a class="nav-link text-danger"
+            <a class="nav-link sidebar-link sidebar-logout"
                href="/auth/logout.php">
-                🚪 Logout
+                <i class="bi bi-door-open me-2"></i>Logout
             </a>
         </li>
 
