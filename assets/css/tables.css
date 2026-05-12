@@ -85,16 +85,16 @@
 
 /* ── Section title ── */
 .section-title {
-  border-left: 4px solid #c9a227;
+  border-left: 4px solid var(--dgc-gold, #c9a227);
   padding-left: 10px;
-  color: #064a20;
+  color: var(--dgc-green-dark, #064a20);
   font-weight: 700;
 }
 
 /* ── Audit trail badge types ── */
-.badge.bg-status-change { background-color: #0b5e2b !important; }
+.badge.bg-status-change { background-color: var(--dgc-green, #0b5e2b) !important; }
 .badge.bg-policy {
-  background-color: #c9a227 !important;
+  background-color: var(--dgc-gold, #c9a227) !important;
   color: #1a1a1a !important;
 }
 

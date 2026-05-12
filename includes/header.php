@@ -24,12 +24,12 @@ require_once $_SERVER['DOCUMENT_ROOT'] . "/config/auth.php";
 <body class="prms-body">
 
 <!-- Mobile sidebar toggle -->
-<div class="d-md-none text-white p-2 d-flex align-items-center justify-content-between" style="background:linear-gradient(90deg,#1a1a2e,#0f3460);">
-  <a href="/dashboard/index.php" class="text-white text-decoration-none d-flex align-items-center gap-2">
+<div class="d-md-none mobile-topbar">
+  <a href="/dashboard/index.php" class="mobile-topbar-brand">
     <img src="/logo/cropped-Logo.png" alt="Logo" style="height:26px; filter: brightness(0) invert(1);">
-    <span class="fw-bold" style="font-size:0.9rem; letter-spacing:0.5px;">DGC PRMS</span>
+    <span>DGC PRMS</span>
   </a>
-  <button class="btn btn-sm" style="background:rgba(255,255,255,0.12); color:#fff; border:1px solid rgba(255,255,255,0.2); border-radius:6px;" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+  <button class="btn btn-sm mobile-menu-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
     <i class="bi bi-list"></i>
   </button>
 </div>
@@ -59,7 +59,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . "/config/auth.php";
   <div class="global-topbar-right">
     <span class="topbar-date d-none d-sm-flex">
       <i class="bi bi-calendar3 me-1"></i>
-      <?= date('D, j M Y') ?>
+      <time datetime="<?= date('Y-m-d') ?>"><?= date('D, j M Y') ?></time>
     </span>
     <div class="topbar-user-chip">
       <div class="topbar-avatar-circle">

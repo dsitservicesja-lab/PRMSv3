@@ -5,13 +5,13 @@
 </div> <!-- end container-fluid -->
 
 <!-- Footer -->
-<footer class="footer mt-auto" style="background:#ffffff; border-top:1px solid #e5e7eb; padding:0.75rem 1.5rem;">
+<footer class="prms-footer">
   <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-    <div style="font-size:0.78rem; color:#6b7280;">
-      <span style="font-weight:600; color:#374151;">&copy; <?= date('Y') ?> Department of Government Chemist</span>
-      <span style="margin-left:0.5rem; background:#f0fdf4; color:#0b5e2b; padding:0.15rem 0.5rem; border-radius:12px; font-weight:600;">PRMS v1.0</span>
+    <div class="footer-text">
+      <strong>&copy; <?= date('Y') ?> Department of Government Chemist</strong>
+      <span class="footer-version-badge">PRMS v1.0</span>
     </div>
-    <div style="font-size:0.76rem; color:#9ca3af;">
+    <div class="footer-credit">
       <i class="bi bi-cpu me-1"></i>Developed by ICT Unit &nbsp;&bull;&nbsp; All Rights Reserved
     </div>
   </div>

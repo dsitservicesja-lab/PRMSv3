@@ -7,7 +7,7 @@
 .btn-invoice     { background: #059669; color: #fff; border: none; }
 .btn-payment     { background: #6b7280; color: #fff; border: none; }
 .btn-management  { background: #1e293b; color: #fff; border: none; }
-.btn-analytics   { background: #c9a227; color: #1a1a1a; border: none; }
+.btn-analytics   { background: var(--dgc-gold, #c9a227); color: #1a1a1a; border: none; }
 
 .btn-procurement:hover,
 .btn-invoice:hover,
