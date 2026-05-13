@@ -130,6 +130,22 @@ function isCollapsibleActive($urls, $currentPage) {
         </li>
         <?php endif; ?>
 
+        <!-- ===== PROPERTY MANAGEMENT OFFICER DASHBOARD ===== -->
+        <?php if ($roleName === 'Property Management Officer'): ?>
+        <li class="nav-item mt-2">
+            <div class="sidebar-section-label">PROPERTY MANAGEMENT</div>
+            <a class="nav-link text-white sidebar-link <?= active('/dashboard/property_management_officer', $currentPage) ?>" href="/dashboard/property_management_officer.php">
+                <i class="bi bi-building-gear me-2"></i>PMO Dashboard
+            </a>
+            <a class="nav-link text-white sidebar-link <?= active('/procurement/list', $currentPage) ?>" href="/procurement/list.php">
+                <i class="bi bi-clipboard-check me-2"></i>All Requests
+            </a>
+            <a class="nav-link text-white sidebar-link <?= active('/po/list', $currentPage) ?>" href="/po/list.php">
+                <i class="bi bi-receipt me-2"></i>Purchase Orders
+            </a>
+        </li>
+        <?php endif; ?>
+
         <!-- ===== CORE SECTION ===== -->
         <li class="nav-item mt-2">
             <a class="nav-link text-white sidebar-link <?= active('/dashboard', $currentPage) ?>"
@@ -436,6 +452,10 @@ function isCollapsibleActive($urls, $currentPage) {
             <a class="nav-link text-white sidebar-link <?= active('/acting_roles', $currentPage) ?>"
                href="/users/acting_roles.php">
                 <i class="bi bi-lightning me-2"></i>Acting Roles
+            </a>
+            <a class="nav-link text-white sidebar-link <?= active('/admin/page_permissions', $currentPage) ?>"
+               href="/admin/page_permissions.php">
+                <i class="bi bi-shield-lock me-2"></i>Page Permissions
             </a>
             <?php endif; ?>
 
