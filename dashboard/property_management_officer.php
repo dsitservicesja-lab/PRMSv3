@@ -117,15 +117,26 @@ if ($invReady) {
 $totalPending = $pendingReqs + $pendingGrn + $pendingTransfers + $pendingAdj + $pendingDisp;
 
 /* ─── Workplace procurement request tracking ───────────────────────── */
+// Status display metadata (single source of truth used by both count filter and HTML)
+$procStatusLabels = [
+    'DRAFT'             => ['label' => 'Draft',            'color' => 'secondary', 'pending' => false],
+    'SUBMITTED'         => ['label' => 'Submitted',        'color' => 'info',      'pending' => true],
+    'PENDING_HOD'       => ['label' => 'Pending HOD',      'color' => 'warning',   'pending' => true],
+    'PENDING_FINANCE'   => ['label' => 'Pending Finance',  'color' => 'warning',   'pending' => true],
+    'PENDING_COMMITTEE' => ['label' => 'Pending Committee','color' => 'warning',   'pending' => true],
+    'PENDING_DGC'       => ['label' => 'Pending DGC',      'color' => 'warning',   'pending' => true],
+    'APPROVED'          => ['label' => 'Approved',         'color' => 'success',   'pending' => false],
+    'DECLINED'          => ['label' => 'Declined',         'color' => 'danger',    'pending' => false],
+    'CANCELLED'         => ['label' => 'Cancelled',        'color' => 'dark',      'pending' => false],
+];
+$procPendingStatuses = array_keys(array_filter($procStatusLabels, fn($m) => $m['pending']));
+
 // Status counts for all procurement requests visible to this role
 $procStatusCounts = $pdo->query("
     SELECT status, COUNT(*) AS cnt
     FROM procurement_requests
     WHERE request_type NOT IN ('REIMBURSEMENT','PETTY_CASH')
     GROUP BY status
-    ORDER BY FIELD(status,
-        'DRAFT','SUBMITTED','PENDING_HOD','PENDING_FINANCE',
-        'PENDING_COMMITTEE','PENDING_DGC','APPROVED','DECLINED','CANCELLED')
 ")->fetchAll(PDO::FETCH_KEY_PAIR);
 
 // Recent / active procurement requests (last 20)
@@ -140,10 +151,10 @@ $recentProcurement = $pdo->query("
     LIMIT 20
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Pending-approval count breakdown for the quick-glance row
-$procPendingTotal = array_sum(array_filter($procStatusCounts, function ($k) {
-    return in_array($k, ['SUBMITTED','PENDING_HOD','PENDING_FINANCE','PENDING_COMMITTEE','PENDING_DGC']);
-}, ARRAY_FILTER_USE_KEY));
+// Pending-approval total derived from the same labels array
+$procPendingTotal = array_sum(
+    array_intersect_key($procStatusCounts, array_flip($procPendingStatuses))
+);
 
 $lifecycleLabels = [
     'ORDERED'     => ['label' => 'Ordered',      'color' => 'info'],
@@ -486,19 +497,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
 
     <!-- Status summary pills -->
     <div class="row g-2 mb-4">
-        <?php
-        $statusLabels = [
-            'DRAFT'              => ['label' => 'Draft',           'color' => 'secondary'],
-            'SUBMITTED'          => ['label' => 'Submitted',       'color' => 'info'],
-            'PENDING_HOD'        => ['label' => 'Pending HOD',     'color' => 'warning'],
-            'PENDING_FINANCE'    => ['label' => 'Pending Finance', 'color' => 'warning'],
-            'PENDING_COMMITTEE'  => ['label' => 'Pending Committee','color' => 'warning'],
-            'PENDING_DGC'        => ['label' => 'Pending DGC',     'color' => 'warning'],
-            'APPROVED'           => ['label' => 'Approved',        'color' => 'success'],
-            'DECLINED'           => ['label' => 'Declined',        'color' => 'danger'],
-            'CANCELLED'          => ['label' => 'Cancelled',       'color' => 'dark'],
-        ];
-        foreach ($statusLabels as $st => $meta):
+        <?php foreach ($procStatusLabels as $st => $meta):
             $cnt = (int)($procStatusCounts[$st] ?? 0);
             if ($cnt === 0) continue;
         ?>
@@ -549,7 +548,7 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
                             </td>
                         </tr>
                         <?php else: foreach ($recentProcurement as $pr):
-                            $stMeta = $statusLabels[$pr['status']] ?? ['label' => $pr['status'], 'color' => 'secondary'];
+                            $stMeta = $procStatusLabels[$pr['status']] ?? ['label' => $pr['status'], 'color' => 'secondary'];
                         ?>
                         <tr>
                             <td>

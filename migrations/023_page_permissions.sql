@@ -103,7 +103,7 @@ INSERT IGNORE INTO `page_permissions` (`page_path`, `page_title`, `permission_na
 ('/procurement/recommend.php',          'Recommend Request',            'approve_request',         'Procurement'),
 ('/procurement/my_requests.php',        'My Requests',                  'view_own_requests',       'Procurement'),
 ('/procurement/start_procurement.php',  'Start Procurement',            'view_requests',           'Procurement'),
-('/procurement/upload_document.php',    'Upload Document',              'view_request',            'Procurement'),
+('/procurement/upload_document.php',    'Upload Document',              'view_requests',           'Procurement'),
 ('/procurement/upload_signed_request.php','Upload Signed Request',     'view_requests',           'Procurement'),
 ('/procurement/print_for_signing.php',  'Print for Signing',            'view_requests',           'Procurement'),
 ('/procurement/verify_funds.php',       'Verify Funds',                 'verify_funds',            'Procurement'),

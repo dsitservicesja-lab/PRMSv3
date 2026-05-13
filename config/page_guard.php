@@ -21,17 +21,27 @@ if (isset($REQUIRE_PERMISSION)) {
     $effectivePermission = $REQUIRE_PERMISSION;
 
     try {
-        $pagePath = strtok($_SERVER['REQUEST_URI'], '?');  // strip query string
+        // Normalise the path: strip query string and collapse any double-slashes.
+        $rawPath  = $_SERVER['REQUEST_URI'];
+        $pagePath = strtok($rawPath, '?');                 // remove query string
+        $pagePath = '/' . ltrim($pagePath, '/');           // ensure leading slash
+        $pagePath = preg_replace('#/+#', '/', $pagePath);  // collapse // → /
+        // Only proceed if the path looks like a safe, expected page path.
+        if (!preg_match('#^/[a-zA-Z0-9/_\-\.]+$#', $pagePath)) {
+            $pagePath = null;
+        }
         $ppStmt = $pdo->prepare("
             SELECT permission_name
             FROM page_permissions
             WHERE page_path = ? AND is_active = 1
             LIMIT 1
         ");
-        $ppStmt->execute([$pagePath]);
-        $dbPerm = $ppStmt->fetchColumn();
-        if ($dbPerm !== false && $dbPerm !== '') {
-            $effectivePermission = $dbPerm;
+        if ($pagePath !== null) {
+            $ppStmt->execute([$pagePath]);
+            $dbPerm = $ppStmt->fetchColumn();
+            if ($dbPerm !== false && $dbPerm !== '') {
+                $effectivePermission = $dbPerm;
+            }
         }
     } catch (Exception $e) {
         // Table may not exist yet – silently fall back to hard-coded value.
