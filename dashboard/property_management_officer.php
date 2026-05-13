@@ -1,5 +1,5 @@
 <?php
-$REQUIRE_PERMISSION = 'view_inventory';
+$REQUIRE_PERMISSION = 'view_pmo_dashboard';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/page_guard.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/config/db.php';
 require_once $_SERVER['DOCUMENT_ROOT'] . '/services/InventoryService.php';
@@ -115,6 +115,35 @@ if ($invReady) {
 }
 
 $totalPending = $pendingReqs + $pendingGrn + $pendingTransfers + $pendingAdj + $pendingDisp;
+
+/* ─── Workplace procurement request tracking ───────────────────────── */
+// Status counts for all procurement requests visible to this role
+$procStatusCounts = $pdo->query("
+    SELECT status, COUNT(*) AS cnt
+    FROM procurement_requests
+    WHERE request_type NOT IN ('REIMBURSEMENT','PETTY_CASH')
+    GROUP BY status
+    ORDER BY FIELD(status,
+        'DRAFT','SUBMITTED','PENDING_HOD','PENDING_FINANCE',
+        'PENDING_COMMITTEE','PENDING_DGC','APPROVED','DECLINED','CANCELLED')
+")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+// Recent / active procurement requests (last 20)
+$recentProcurement = $pdo->query("
+    SELECT pr.id, pr.request_number, pr.description, pr.status,
+           pr.total_amount, pr.currency, pr.created_at,
+           u.full_name AS requestor_name
+    FROM procurement_requests pr
+    LEFT JOIN users u ON pr.created_by = u.user_id
+    WHERE pr.request_type NOT IN ('REIMBURSEMENT','PETTY_CASH')
+    ORDER BY pr.created_at DESC
+    LIMIT 20
+")->fetchAll(PDO::FETCH_ASSOC);
+
+// Pending-approval count breakdown for the quick-glance row
+$procPendingTotal = array_sum(array_filter($procStatusCounts, function ($k) {
+    return in_array($k, ['SUBMITTED','PENDING_HOD','PENDING_FINANCE','PENDING_COMMITTEE','PENDING_DGC']);
+}, ARRAY_FILTER_USE_KEY));
 
 $lifecycleLabels = [
     'ORDERED'     => ['label' => 'Ordered',      'color' => 'info'],
@@ -448,5 +477,116 @@ require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/header.php';
 </div>
 
 <?php endif; ?>
+
+<!-- ── Workplace Procurement Requests ────────────────────────────────── -->
+<div class="mt-5">
+    <h4 class="fw-bold border-bottom pb-2 mb-3">
+        <i class="bi bi-briefcase me-2"></i>Workplace Procurement Requests
+    </h4>
+
+    <!-- Status summary pills -->
+    <div class="row g-2 mb-4">
+        <?php
+        $statusLabels = [
+            'DRAFT'              => ['label' => 'Draft',           'color' => 'secondary'],
+            'SUBMITTED'          => ['label' => 'Submitted',       'color' => 'info'],
+            'PENDING_HOD'        => ['label' => 'Pending HOD',     'color' => 'warning'],
+            'PENDING_FINANCE'    => ['label' => 'Pending Finance', 'color' => 'warning'],
+            'PENDING_COMMITTEE'  => ['label' => 'Pending Committee','color' => 'warning'],
+            'PENDING_DGC'        => ['label' => 'Pending DGC',     'color' => 'warning'],
+            'APPROVED'           => ['label' => 'Approved',        'color' => 'success'],
+            'DECLINED'           => ['label' => 'Declined',        'color' => 'danger'],
+            'CANCELLED'          => ['label' => 'Cancelled',       'color' => 'dark'],
+        ];
+        foreach ($statusLabels as $st => $meta):
+            $cnt = (int)($procStatusCounts[$st] ?? 0);
+            if ($cnt === 0) continue;
+        ?>
+        <div class="col-auto">
+            <a href="/procurement/list.php?status=<?= urlencode($st) ?>" class="text-decoration-none">
+                <div class="card border-0 shadow-sm text-center px-3 py-2 bg-<?= $meta['color'] ?> bg-opacity-10 border-<?= $meta['color'] ?> border-opacity-25">
+                    <div class="fw-bold text-<?= $meta['color'] ?> fs-5"><?= $cnt ?></div>
+                    <small class="text-muted"><?= $meta['label'] ?></small>
+                </div>
+            </a>
+        </div>
+        <?php endforeach; ?>
+
+        <div class="col-auto ms-auto d-flex align-items-center">
+            <a href="/procurement/list.php" class="btn btn-outline-dark btn-sm">
+                <i class="bi bi-list-ul me-1"></i>View All Requests
+            </a>
+        </div>
+    </div>
+
+    <!-- Recent requests table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-clock-history me-1"></i> Recent Requests (Last 20)</span>
+            <span class="badge bg-warning text-dark">
+                <?= $procPendingTotal ?> Pending Action
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 small">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Ref #</th>
+                            <th>Description</th>
+                            <th>Requested By</th>
+                            <th class="text-end">Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($recentProcurement)): ?>
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                No procurement requests found.
+                            </td>
+                        </tr>
+                        <?php else: foreach ($recentProcurement as $pr):
+                            $stMeta = $statusLabels[$pr['status']] ?? ['label' => $pr['status'], 'color' => 'secondary'];
+                        ?>
+                        <tr>
+                            <td>
+                                <a href="/procurement/view.php?id=<?= $pr['id'] ?>" class="text-decoration-none fw-medium">
+                                    <?= htmlspecialchars($pr['request_number'] ?? '#' . $pr['id']) ?>
+                                </a>
+                            </td>
+                            <td class="text-truncate" style="max-width:240px">
+                                <?= htmlspecialchars($pr['description'] ?? '—') ?>
+                            </td>
+                            <td><?= htmlspecialchars($pr['requestor_name'] ?? '—') ?></td>
+                            <td class="text-end fw-semibold">
+                                <?php if ($pr['total_amount']): ?>
+                                    <?= htmlspecialchars($pr['currency'] ?? 'JMD') ?>
+                                    <?= number_format((float)$pr['total_amount'], 2) ?>
+                                <?php else: ?>
+                                    —
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <span class="badge bg-<?= $stMeta['color'] ?>">
+                                    <?= $stMeta['label'] ?>
+                                </span>
+                            </td>
+                            <td><?= date('Y-m-d', strtotime($pr['created_at'])) ?></td>
+                            <td>
+                                <a href="/procurement/view.php?id=<?= $pr['id'] ?>" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php require_once $_SERVER['DOCUMENT_ROOT'] . '/includes/footer.php'; ?>
