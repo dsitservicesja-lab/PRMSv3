@@ -280,6 +280,7 @@ if ($disbursement) {
           // Finance approval actions
           $isFinanceOfficer = ($_SESSION['role_name'] ?? '') === 'Finance Officer';
           $canApprove = in_array($request['status'], ['SUBMITTED']) && $isFinanceOfficer;
+          $reconciliationEligibleStatuses = ['FUNDS_VERIFIED', 'FINANCE_AUTHORIZED', 'DISBURSED', 'PENDING_RECONCILIATION'];
           ?>
           
           <?php if ($canApprove): ?>
@@ -300,6 +301,17 @@ if ($disbursement) {
                 <i class="bi bi-x-circle"></i> Decline
               </button>
             </form>
+          <?php endif; ?>
+
+          <?php if (
+            $disbursement
+            && !$reconciliation
+            && (int)($_SESSION['user_id'] ?? 0) === (int)$request['created_by']
+            && in_array($request['status'], $reconciliationEligibleStatuses)
+          ): ?>
+            <a href="/petty_cash/reconcile.php?id=<?= $request_id ?>" class="btn btn-warning btn-sm">
+              <i class="bi bi-receipt me-1"></i>Submit Reconciliation
+            </a>
           <?php endif; ?>
           
           <a href="/petty_cash/list.php" class="btn btn-outline-secondary btn-sm">
