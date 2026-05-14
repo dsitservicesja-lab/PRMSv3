@@ -8,7 +8,9 @@ $schemaError = null;
 $requiredColumns = ['id', 'page_path', 'page_title', 'permission_name', 'module', 'is_active'];
 
 try {
-    $currentDb = (string)$pdo->query("SELECT DATABASE()")->fetchColumn();
+    $dbStmt = $pdo->prepare("SELECT DATABASE()");
+    $dbStmt->execute();
+    $currentDb = (string)$dbStmt->fetchColumn();
 
     if ($currentDb === '') {
         $schemaError = 'Database schema could not be determined. Please verify database configuration.';
@@ -139,6 +141,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     jsonError('Unknown action.');
 }
 
+/**
+ * @return void
+ */
 function jsonError(string $msg) {
     http_response_code(400);
     echo json_encode(['ok' => false, 'message' => $msg]);
