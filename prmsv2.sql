@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: May 14, 2026 at 09:10 PM
+-- Generation Time: May 14, 2026 at 09:37 PM
 -- Server version: 11.8.6-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -2322,7 +2322,8 @@ INSERT INTO `audit_log` (`audit_id`, `table_name`, `record_id`, `action`, `chang
 (2171, 'procurement_requests', 158, 'RFQ_LETTER_AVAILABLE', 'Nellesha Samuels', '2026-05-13 21:54:50', 'Approval by Director HRM&A'),
 (2172, 'procurement_requests', 159, 'CREATE', 'Alfred Bryan', '2026-05-14 18:19:15', 'Procurement request created'),
 (2173, 'procurement_requests', 159, 'STATUS_CHANGE', 'Alfred Bryan', '2026-05-14 18:20:01', 'Draft → Submitted'),
-(2174, 'procurement_requests', 159, 'APPROVAL_CHAIN_CREAT', 'Alfred Bryan', '2026-05-14 18:20:01', 'Approval chain created: Director HRM&A');
+(2174, 'procurement_requests', 159, 'APPROVAL_CHAIN_CREAT', 'Alfred Bryan', '2026-05-14 18:20:01', 'Approval chain created: Director HRM&A'),
+(2175, 'MIGRATION', NULL, 'SCHEMA_FIX', 'system', '2026-05-14 21:37:14', '2026_05_14_ensure_notes_columns applied');
 
 -- --------------------------------------------------------
 
@@ -4855,7 +4856,7 @@ ALTER TABLE `approval_workflows`
 -- AUTO_INCREMENT for table `audit_log`
 --
 ALTER TABLE `audit_log`
-  MODIFY `audit_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2175;
+  MODIFY `audit_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2176;
 
 --
 -- AUTO_INCREMENT for table `branches`
