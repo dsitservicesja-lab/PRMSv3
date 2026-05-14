@@ -6,6 +6,7 @@ require_once $_SERVER['DOCUMENT_ROOT'].'/config/helper.php';
 require_once $_SERVER['DOCUMENT_ROOT'].'/config/workflow.php';
 
 const RECONCILIATION_TOLERANCE = 0.0001;
+const SECONDS_PER_HOUR = 3600;
 
 $requestId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($requestId <= 0) {
@@ -79,14 +80,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $reconciliationDelta = abs(($purchaseAmount + $changeAmount) - $authorizedAmount);
         if ($reconciliationDelta > RECONCILIATION_TOLERANCE) {
-            throw new Exception("Purchase amount plus change must reconcile with the authorized petty cash amount.");
+            throw new Exception(sprintf(
+                "Reconciliation failed: difference of %.2f exceeds tolerance of %.4f.",
+                $reconciliationDelta,
+                RECONCILIATION_TOLERANCE
+            ));
         }
 
         $now = new DateTime();
         $disbursementTime = new DateTime($disbursement['disbursement_date']);
         $deadline = new DateTime($disbursement['disbursement_deadline']);
         $seconds = max(0, $now->getTimestamp() - $disbursementTime->getTimestamp());
-        $hoursFromDisbursement = round($seconds / 3600, 2);
+        $hoursFromDisbursement = round($seconds / SECONDS_PER_HOUR, 2);
         $deadlineMet = $now <= $deadline ? 1 : 0;
 
         $pdo->beginTransaction();
