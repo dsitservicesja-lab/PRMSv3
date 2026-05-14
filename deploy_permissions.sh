@@ -18,14 +18,11 @@ NC='\033[0m' # No Color
 # CONFIGURATION
 # ============================================================================
 
-# Database credentials (customize as needed)
-DB_USER="${DB_USER:-root}"
-DB_HOST="${DB_HOST:-localhost}"
-DB_NAME="${DB_NAME:-prms}"
-DB_PASS="${DB_PASS:-.}"
+APP_DIR="${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+ENV_FILE="$APP_DIR/.env"
 
 # Migration directory
-MIGRATION_DIR="./migrations"
+MIGRATION_DIR="$APP_DIR/migrations"
 LOG_FILE="permission_deployment.log"
 
 # ============================================================================
@@ -57,6 +54,23 @@ main() {
     log "=================================================="
     log "PRMS Permission System Deployment"
     log "=================================================="
+
+    # Load DB settings from .env
+    if [ ! -f "$ENV_FILE" ]; then
+        error ".env not found at $ENV_FILE"
+    fi
+
+    while IFS= read -r _line || [[ -n "$_line" ]]; do
+        [[ "$_line" =~ ^[[:space:]]*$  ]] && continue
+        [[ "$_line" =~ ^[[:space:]]*# ]] && continue
+        export "$_line"
+    done < "$ENV_FILE"
+
+    : "${DB_HOST:?DB_HOST must be set in .env}"
+    : "${DB_PORT:?DB_PORT must be set in .env}"
+    : "${DB_NAME:?DB_NAME must be set in .env}"
+    : "${DB_USER:?DB_USER must be set in .env}"
+    : "${DB_PASS:?DB_PASS must be set in .env}"
     
     # Check if migration files exist
     if [ ! -f "$MIGRATION_DIR/012_assign_default_role_permissions.sql" ]; then
@@ -70,7 +84,7 @@ main() {
     # Backup database
     log "Creating database backup..."
     BACKUP_FILE="prms_backup_$(date +%Y%m%d_%H%M%S).sql"
-    if mysqldump -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_FILE"; then
+    if mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" > "$BACKUP_FILE"; then
         success "Database backed up to $BACKUP_FILE"
     else
         error "Failed to backup database"
@@ -78,23 +92,23 @@ main() {
     
     # Run Migration 012 (if not already run)
     log "Checking if migration 012 has been applied..."
-    if mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SELECT COUNT(*) FROM permissions WHERE name='view_requests';" 2>/dev/null | grep -q "[0-9]"; then
+    if mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "SELECT COUNT(*) FROM permissions WHERE name='view_requests';" 2>/dev/null | grep -q "[0-9]"; then
         success "Migration 012 appears to be already applied"
     else
         log "Running migration 012..."
-        mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$MIGRATION_DIR/012_assign_default_role_permissions.sql" || error "Migration 012 failed"
+        mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$MIGRATION_DIR/012_assign_default_role_permissions.sql" || error "Migration 012 failed"
         success "Migration 012 completed"
     fi
     
     # Run Migration 013 (Comprehensive 65 Permissions)
     log "Running migration 013 (65 comprehensive permissions)..."
-    mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$MIGRATION_DIR/013_comprehensive_permissions_65.sql" || error "Migration 013 failed"
+    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$MIGRATION_DIR/013_comprehensive_permissions_65.sql" || error "Migration 013 failed"
     success "Migration 013 completed"
     
     # Verification
     log "Verifying installation..."
     
-    PERM_COUNT=$(mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -sNe "SELECT COUNT(*) FROM permissions;")
+    PERM_COUNT=$(mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -sNe "SELECT COUNT(*) FROM permissions;")
     log "Total permissions created: $PERM_COUNT"
     if [ "$PERM_COUNT" -ge 65 ]; then
         success "Permission count verified (expected 65+, got $PERM_COUNT)"
@@ -102,7 +116,7 @@ main() {
         warning "Permission count lower than expected (expected 65, got $PERM_COUNT)"
     fi
     
-    ROLE_COUNT=$(mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -sNe "SELECT COUNT(DISTINCT role_id) FROM role_permissions;")
+    ROLE_COUNT=$(mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -sNe "SELECT COUNT(DISTINCT role_id) FROM role_permissions;")
     log "Roles with permissions assigned: $ROLE_COUNT"
     if [ "$ROLE_COUNT" -ge 12 ]; then
         success "All 12 roles have permissions assigned"
@@ -110,7 +124,7 @@ main() {
         warning "Only $ROLE_COUNT roles have permissions (expected 12)"
     fi
     
-    ORPHANED=$(mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -sNe "SELECT COUNT(*) FROM permissions p WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE permission_id=p.id);")
+    ORPHANED=$(mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" -sNe "SELECT COUNT(*) FROM permissions p WHERE NOT EXISTS (SELECT 1 FROM role_permissions WHERE permission_id=p.id);")
     if [ "$ORPHANED" -eq 0 ]; then
         success "No orphaned permissions found"
     else
@@ -121,7 +135,7 @@ main() {
     log "=================================================="
     log "PERMISSION SUMMARY BY ROLE"
     log "=================================================="
-    mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" <<EOF
+    mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" <<EOF
 SELECT 
     r.id,
     r.name,
