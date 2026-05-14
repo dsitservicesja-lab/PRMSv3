@@ -77,8 +77,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($changeAmount < 0) {
             throw new Exception("Change amount cannot be negative.");
         }
-        if (($purchaseAmount + $changeAmount) - $authorizedAmount > RECONCILIATION_TOLERANCE) {
-            throw new Exception("Purchase amount and change exceed the authorized petty cash amount.");
+        $reconciliationDelta = abs(($purchaseAmount + $changeAmount) - $authorizedAmount);
+        if ($reconciliationDelta > RECONCILIATION_TOLERANCE) {
+            throw new Exception("Purchase amount plus change must reconcile with the authorized petty cash amount.");
         }
 
         $now = new DateTime();
