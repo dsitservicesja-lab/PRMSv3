@@ -9,7 +9,7 @@ error_reporting($isProd ? E_ALL & ~E_NOTICE & ~E_DEPRECATED : E_ALL);
 
 $envFile = dirname(__DIR__) . '/.env';
 if (!is_file($envFile)) {
-    die('Database configuration failed.');
+    die('Required .env file not found.');
 }
 
 $requiredDbKeys = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'];
@@ -22,10 +22,11 @@ foreach ($requiredDbKeys as $key) {
 }
 
 if (!empty($missingDbKeys)) {
+    $missingMsg = 'Required database configuration missing in .env: ' . implode(', ', $missingDbKeys);
     if (!$isProd) {
-        error_log('Missing required DB settings in .env: ' . implode(', ', $missingDbKeys));
+        error_log($missingMsg);
     }
-    die('Database configuration failed.');
+    die($missingMsg);
 }
 
 $host   = env('DB_HOST');
