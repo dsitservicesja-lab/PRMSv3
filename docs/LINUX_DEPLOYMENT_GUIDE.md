@@ -74,11 +74,7 @@ Or use the helper flag in `deploy.sh`:
 sudo bash deploy/deploy.sh --init-db
 ```
 
-### Import the base schema
-
-```bash
-mysql -u prms_user -p prms_ims < prmsv2.sql
-```
+> `deploy.sh --init-db` imports the base schema from `prmsv2.sql` automatically.
 
 ### Run migrations (in order)
 

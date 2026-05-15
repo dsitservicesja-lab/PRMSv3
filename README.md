@@ -64,9 +64,8 @@ nano .env   # set DB credentials, SMTP, APP_URL
 # 4. Install PHP dependencies
 composer install --no-dev --optimize-autoloader
 
-# 5. Create database and import schema
+# 5. Create database and apply base schema
 sudo bash deploy/deploy.sh --init-db
-mysql -u prms_user -p prms_ims < prmsv2.sql
 
 # 6. Run migrations
 sudo bash deploy/deploy.sh --run-migrations

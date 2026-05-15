@@ -15,7 +15,8 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-/var/www/prms/public}"
 MIGRATIONS_DIR="$APP_DIR/migrations"
 ENV_FILE="$APP_DIR/.env"
-BASE_SCHEMA_NAME="01prms_ims.sql"
+BASE_SCHEMA_NAME="prmsv2.sql"
+BASE_SCHEMA_PATH="$APP_DIR/$BASE_SCHEMA_NAME"
 
 INIT_DB=false
 RUN_MIGRATIONS=false
@@ -68,8 +69,8 @@ FLUSH PRIVILEGES;
 SQL
     log "Database '$DB_NAME' and user '$DB_USER' created."
 
-    # Apply the base schema from 01prms_ims.sql
-    BASE_SCHEMA="$MIGRATIONS_DIR/$BASE_SCHEMA_NAME"
+    # Apply the base schema from prmsv2.sql
+    BASE_SCHEMA="$BASE_SCHEMA_PATH"
     if [[ -f "$BASE_SCHEMA" ]]; then
         log "Applying base schema: $BASE_SCHEMA_NAME"
         $MYSQL "$DB_NAME" < "$BASE_SCHEMA"
@@ -105,7 +106,7 @@ if [[ "$RUN_MIGRATIONS" == "true" ]]; then
     APPLIED_FILE="$APP_DIR/.applied_migrations"
     touch "$APPLIED_FILE"
 
-    # 01prms_ims.sql is the base schema applied during --init-db; always skip it here
+    # prmsv2.sql is the base schema applied during --init-db; always skip it here
     if ! grep -qxF "$BASE_SCHEMA_NAME" "$APPLIED_FILE"; then
         echo "$BASE_SCHEMA_NAME" >> "$APPLIED_FILE"
     fi
